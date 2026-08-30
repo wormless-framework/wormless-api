@@ -1,0 +1,70 @@
+name: backend CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  compile:
+    name: compilar código
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout do código
+        uses: actions/checkout@v4
+
+      - name: configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: compilar com Maven
+        run: mvn compile
+
+  test:
+    name: executar testes
+    needs: compile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout do código
+        uses: actions/checkout@v4
+
+      - name: configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: rodar testes unitários
+        run: mvn test
+
+  package:
+    name: empacotar artefato 
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout do código
+        uses: actions/checkout@v4
+
+      - name: configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: gerar pacote JAR
+        run: mvn package -DskipTests
+
+      - name: salvar artefato (.jar)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wormless-backend-jar
+          path: target/*.jar
