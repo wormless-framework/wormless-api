@@ -1,0 +1,103 @@
+name: CI - wormless
+on:
+  push:
+    branches: [main, staging, production]
+  pull_request:
+    branches: [main, staging, production]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+env:
+  JAVA_VERSION: 21
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Check code style
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+      - name: Run Checkstyle
+        run: mvn validate
+
+  spotbugs:
+    name: SpotBugs analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+      - name: Run SpotBugs
+        run: mvn compile spotbugs:check
+      - name: Upload SpotBugs report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: spotbugs-report
+          path: target/spotbugsXml.xml
+
+  test:
+    name: Unit & integration tests
+    needs: [lint, spotbugs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+      - name: Run Tests
+        run: mvn test jacoco:report -Dspring.profiles.active=test
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: coverage-report
+          path: target/site/jacoco/
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: test-report
+          path: target/surefire-reports/
+
+  build:
+    name: Build application (verify only, no push)
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+      - name: Verify JAR builds correctly
+        run: mvn package -DskipTests
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: wormless:pr-check
