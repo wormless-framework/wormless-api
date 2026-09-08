@@ -1,4 +1,4 @@
-package com.wormless.wormless;
+package com.wormless;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
