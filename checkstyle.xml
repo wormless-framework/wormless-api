@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  Ruleset do Wormless — baseado no google_checks.xml, mas com dois ajustes
+  deliberados em relação ao padrão do Google:
+    1. Indentação de 4 espaços (padrão Java/IDE), não 2.
+    2. Javadoc não é obrigatório (MissingJavadocType/Method removidos).
+  Todo o resto (imports, nomenclatura, boas práticas, tamanho de linha)
+  segue o conjunto de checks abaixo. Ajuste aqui, não no pom.xml.
+-->
+<module name="Checker">
+
+    <property name="severity" value="warning"/>
+    <property name="fileExtensions" value="java, properties, xml"/>
+
+    <!-- Arquivo não pode terminar sem quebra de linha -->
+    <module name="NewlineAtEndOfFile"/>
+
+    <!-- Sem caracteres de tab -->
+    <module name="FileTabCharacter"/>
+
+    <!-- Linha maior que 120 caracteres -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+    </module>
+
+    <module name="TreeWalker">
+
+        <!-- ==================== IMPORTS ==================== -->
+        <module name="AvoidStarImport"/>
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+        <module name="IllegalImport"/>
+
+        <!-- ==================== NOMENCLATURA ==================== -->
+        <module name="PackageName"/>
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="MemberName"/>
+        <module name="ParameterName"/>
+        <module name="LocalVariableName"/>
+        <module name="ConstantName"/>
+        <module name="StaticVariableName"/>
+
+        <!-- ==================== BOAS PRÁTICAS ==================== -->
+        <module name="EqualsHashCode"/>
+        <module name="EmptyCatchBlock">
+            <property name="exceptionVariableName" value="expected|ignored"/>
+        </module>
+        <module name="EmptyStatement"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="StringLiteralEquality"/>
+        <module name="OneStatementPerLine"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="FallThrough"/>
+        <module name="IllegalThrows"/>
+        <module name="MissingSwitchDefault"/>
+
+        <!-- ==================== BLOCOS / CHAVES ==================== -->
+        <module name="NeedBraces"/>
+        <module name="EmptyBlock">
+            <property name="option" value="text"/>
+        </module>
+        <module name="LeftCurly"/>
+        <module name="RightCurly"/>
+
+        <!-- ==================== ESPAÇAMENTO ==================== -->
+        <module name="WhitespaceAround"/>
+        <module name="WhitespaceAfter"/>
+        <module name="NoWhitespaceBefore"/>
+        <module name="GenericWhitespace"/>
+
+        <!-- ==================== INDENTAÇÃO: 4 ESPAÇOS ==================== -->
+        <module name="Indentation">
+            <property name="basicOffset" value="4"/>
+            <property name="braceAdjustment" value="0"/>
+            <property name="caseIndent" value="4"/>
+            <property name="throwsIndent" value="4"/>
+            <property name="arrayInitIndent" value="4"/>
+            <property name="lineWrappingIndentation" value="4"/>
+        </module>
+
+        <!-- Javadoc: propositalmente NÃO obrigatório.
+             Se quiserem reintroduzir depois só pra API pública, adicionem:
+             <module name="MissingJavadocType">
+                 <property name="scope" value="public"/>
+             </module>
+        -->
+
+    </module>
+</module>

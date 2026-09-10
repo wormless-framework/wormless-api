@@ -42,7 +42,7 @@ jobs:
           distribution: temurin
           cache: maven
       - name: Run SpotBugs
-        run: mvn compile spotbugs:check
+        run: mvn compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:check
       - name: Upload SpotBugs report
         if: always()
         uses: actions/upload-artifact@v5

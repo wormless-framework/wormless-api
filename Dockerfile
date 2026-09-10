@@ -6,7 +6,7 @@ WORKDIR /build
 # 1. Copia o pom.xml primeiro para aproveitar o cache de camadas do Docker
 COPY pom.xml .
 
-# 2. Baixa as dependências offline. 
+# 2. Baixa as dependências offline.
 # Se o pom.xml não mudar, o Docker usa o cache dessa camada, acelerando muito o build.
 RUN mvn dependency:go-offline -B
 
@@ -14,7 +14,7 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 
 # 4. Compila o projeto pulando os testes (os testes JUnit devem rodar na esteira de CI/CD, antes de gerar a imagem)
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -Dcheckstyle.skip=true -Dspotbugs.skip=true
 
 # Estágio 2: Runtime (Execução)
 FROM eclipse-temurin:21-jre-alpine

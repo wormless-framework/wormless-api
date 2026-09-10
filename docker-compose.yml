@@ -1,32 +1,38 @@
 services:
-  db:
-    image: mysql:8.0
+  mysql:
+    image: mysql:8.4
     container_name: wormless-mysql
+    restart: unless-stopped
     environment:
-      MYSQL_DATABASE: wormless_db
-      MYSQL_USER: wormless_admin
-      MYSQL_PASSWORD: wormless_pass
-      MYSQL_ROOT_PASSWORD: root_pass # O MySQL exige uma senha root
+      MYSQL_DATABASE: wormless
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: wormless
+      MYSQL_PASSWORD: wormless
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - wormless-mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   api:
     build: .
-    container_name: wormless-backend
-    ports:
-      - "8080:8080"
+    container_name: wormless-api
+    restart: unless-stopped
     depends_on:
-      db:
+      mysql:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE=default
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: wormless
+      DB_USER: wormless
+      DB_PASSWORD: wormless
+    ports:
+      - "8080:8080"
 
 volumes:
-  mysql_data:
+  wormless-mysql-data:
