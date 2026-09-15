@@ -1,19 +1,54 @@
 package com.wormless.entities;
 
-@Entity
-@Data
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(name = "arquivos")
 public class Arquivo {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String nomeOriginal;
+
     private Long tamanho;
+
     private String tipoMime;
+
     private String caminhoTemporario;
+
     private LocalDateTime dataUpload;
 
-    public boolean validarFormato() { return true; }
-    public boolean validarTamanho() { return true; }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_web_id", nullable = false)
+    private UsuarioWeb usuarioWeb;
+
+    @OneToOne(mappedBy = "arquivo")
+    private AnaliseJob analiseJob;
+
+    public boolean validarFormato() {
+        return tipoMime != null && !tipoMime.isBlank();
+    }
+
+    public boolean validarTamanho() {
+        return tamanho != null && tamanho > 0;
+    }
 }

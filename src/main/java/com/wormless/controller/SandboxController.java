@@ -1,14 +1,15 @@
-package com.wormless.controllers;
+package com.wormless.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.stereotype.Controller;
+
+import com.wormless.entities.Arquivo;
+import com.wormless.service.SandBoxService;
 
 @RestController
-@RequestMapping("/arquivos")
-public class ArquivoController {
+@RequestMapping("/file")
+public class SandboxController {
 
-    @PostMapping("/analisar")
+    @PostMapping("/upload")
     public ResponseEntity<String> analisarArquivo(@RequestParam("file") MultipartFile file) {
         // Aqui futuramente chamaremos o Service que integra com o VirusTotal e a LLM
         

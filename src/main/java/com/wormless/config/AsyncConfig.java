@@ -1,6 +1,4 @@
-// --- PACOTE: com.wormless.api.config ---
-
-package com.wormless.api.config;
+package com.wormless.config;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 
