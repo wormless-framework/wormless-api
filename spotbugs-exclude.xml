@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Falso positivo comum em DTOs/entities do Spring: expor referência
+         interna via getter é intencional nesses casos -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
+        <Class name="~.*\.dto\..*" />
+    </Match>
+
+    <!-- Classes geradas (ex: MapStruct, Lombok @Builder) não precisam de análise -->
+    <Match>
+        <Class name="~.*MapperImpl" />
+    </Match>
+
+    <!-- Exemplo: ignorar um bug específico em uma classe específica -->
+    <!--
+    <Match>
+        <Class name="com.exemplo.sgam.service.ArquivoService" />
+        <Bug pattern="SE_BAD_FIELD" />
+    </Match>
+    -->
+</FindBugsFilter>
