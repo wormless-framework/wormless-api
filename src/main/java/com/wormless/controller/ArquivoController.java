@@ -1,36 +1,79 @@
-package com.wormless.api.controller;
+package com.wormless.controller;
 
-import com.wormless.dto.request.ArquivoUploadDTO;
-import com.wormless.dto.response.AnaliseJobResponseDTO;
 import com.wormless.entities.Arquivo;
-import com.wormless.service.SandboxService;
+import com.wormless.services.ArquivoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
-@RequestMapping("/file")
+@RequestMapping("/arquivos")
 @RequiredArgsConstructor
 public class ArquivoController {
 
-    private final SandboxService sandboxService;
+    private final ArquivoService arquivoService;
 
-    @PostMapping("/upload")
-    public ResponseEntity<AnaliseJobResponseDTO> uploadArquivo(@RequestBody ArquivoUploadDTO dto) {
-        // Conversão simples de DTO para Entidade
-        Arquivo arquivo = new Arquivo();
-        arquivo.setNomeOriginal(dto.nomeOriginal());
-        // Lógica de salvar o arquivo no disco/S3 iria aqui
-        
-        Arquivo arquivoSalvo = sandboxService.registrarUpload(arquivo);
-        
-        // Dispara o processamento em background (Assíncrono)
-        sandboxService.iniciarProcessamentoAsync(arquivoSalvo.getId());
-        
-        return ResponseEntity.ok(new AnaliseJobResponseDTO(
-            arquivoSalvo.getId(), 
-            com.wormless.api.model.enums.StatusJob.PENDENTE, 
-            "Upload realizado com sucesso. Processamento iniciado."
-        ));
+    @PostMapping
+    public ResponseEntity<Arquivo> salvar(
+            @RequestBody Arquivo arquivo) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(arquivoService.salvar(arquivo));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Arquivo> buscarPorId(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                arquivoService.buscarPorId(id)
+        );
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Arquivo>> listarTodos() {
+
+        return ResponseEntity.ok(
+                arquivoService.listarTodos()
+        );
+    }
+
+    @GetMapping("/nome/{nome}")
+    public ResponseEntity<List<Arquivo>> buscarPorNome(
+            @PathVariable String nome) {
+
+        return ResponseEntity.ok(
+                arquivoService.buscarPorNome(nome)
+        );
+    }
+
+    @GetMapping("/usuario/{usuarioWebId}")
+    public ResponseEntity<List<Arquivo>> listarPorUsuario(
+            @PathVariable Long usuarioWebId) {
+
+        return ResponseEntity.ok(
+                arquivoService.listarPorUsuario(usuarioWebId)
+        );
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluir(
+            @PathVariable Long id) {
+
+        arquivoService.excluir(id);
+
+        return ResponseEntity
+                .noContent()
+                .build();
     }
 }

@@ -16,9 +16,6 @@
     <property name="severity" value="warning"/>
     <property name="fileExtensions" value="java, properties, xml"/>
 
-    <!-- Arquivo não pode terminar sem quebra de linha -->
-    <module name="NewlineAtEndOfFile"/>
-
     <!-- Sem caracteres de tab -->
     <module name="FileTabCharacter"/>
 

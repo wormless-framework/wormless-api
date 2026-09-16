@@ -1,19 +1,13 @@
 package com.wormless.entities;
 
-import jakarta.persistence.*;
-import lombok.*;
-import java.time.LocalDateTime;
-import java.time.LocalDate;
-import java.util.List;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
-@Data
-@EqualsAndHashCode(callSuper = true)
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "gestores_soc")
 public class GestorSOC extends Usuario {
-    
-    public PainelGovernanca acessarPainel() {
-        return new PainelGovernanca();
-    }
 }

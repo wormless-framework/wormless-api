@@ -1,5 +1,13 @@
 package com.wormless.repository;
 
-public class ArquivoRepository extends Jparepository<,> {
-    
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.wormless.entities.Arquivo;
+
+public interface ArquivoRepository extends JpaRepository<Arquivo, Long> {
+
+    List<Arquivo> findByNomeOriginal(String nomeOriginal);
+    List<Arquivo> findByUsuarioWebId(Long usuarioWebId);
 }

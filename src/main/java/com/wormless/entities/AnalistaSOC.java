@@ -1,23 +1,23 @@
 package com.wormless.entities;
 
-import jakarta.persistence.*;
-import lombok.*;
-import java.time.LocalDateTime;
-import java.time.LocalDate;
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import java.util.ArrayList;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Entity
-@Data
-@EqualsAndHashCode(callSuper = true)
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(name = "analistas_soc")
 public class AnalistaSOC extends Usuario {
 
-    public RelatorioAmeaca visualizarRelatorio(Long id) {
-        return new RelatorioAmeaca();
-    }
-
-    public FalsoPositivo marcarFalsoPositivo(IndicadorAmeaca indicador, String justificativa) {
-        return new FalsoPositivo();
-    }
+    @OneToMany(mappedBy = "analistaSOC")
+    private List<FalsoPositivo> falsosPositivos = new ArrayList<>();
 }
