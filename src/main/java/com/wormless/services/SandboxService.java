@@ -7,7 +7,8 @@ import com.wormless.entities.Arquivo;
 import com.wormless.entities.enums.StatusJob;
 import com.wormless.exception.BusinessException;
 import com.wormless.exception.ResourceNotFoundException;
-import com.wormless.integrations.sandbox.SandboxClient;
+import com.wormless.integrations.sandbox.SandboxCliente;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,7 @@ public class SandboxService {
 
     private final ArquivoService arquivoService;
     private final AnaliseJobService analiseJobService;
-    private final SandboxClient sandboxClient;
+    private final SandboxCliente sandboxCliente;
 
     @Transactional
     public AnaliseJobResponseDTO iniciarAnalise(
@@ -42,7 +43,6 @@ public class SandboxService {
         }
 
         try {
-
             var arquivoUpload = uploadDTO.getArquivo();
 
             Path caminhoTemporario = Files.createTempFile(
@@ -90,14 +90,20 @@ public class SandboxService {
 
             // Envia o arquivo para o Sandbox externo
             String resultadoBruto =
-                    sandboxClient.executarAnalise(
-                            arquivoUpload
-                    );
+                    sandboxCliente.executarAnalise(arquivoUpload);
+
+            // Guarda o resultado do Sandbox para uso futuro pela IA
+            jobSalvo.setResultadoBruto(resultadoBruto);
+
+            analiseJobService.salvar(jobSalvo);
+
+            // Nesta sprint, a análise termina após o processamento do Sandbox.
+            // A interpretação pela IA será adicionada na próxima sprint.
+            analiseJobService.concluir(jobSalvo.getId());
 
             return consultarResultado(jobSalvo.getId());
 
         } catch (IOException e) {
-
             throw new BusinessException(
                     "Não foi possível preparar o arquivo para análise."
             );
@@ -131,7 +137,6 @@ public class SandboxService {
             AnaliseJob job) {
 
         String resumo;
-
         boolean ameacaDetectada = false;
 
         switch (job.getStatus()) {

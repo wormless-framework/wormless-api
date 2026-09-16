@@ -1,5 +1,6 @@
 package com.wormless.entities;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -55,6 +56,9 @@ public class AnaliseJob {
 
     @OneToMany(mappedBy = "analiseJob")
     private List<DependenciaScan> dependencias = new ArrayList<>();
+
+    @Column(columnDefinition = "TEXT")
+    private String resultadoBruto;
 
     public StatusJob consultarStatus() {
         return status;

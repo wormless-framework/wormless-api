@@ -9,7 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
     name = "sandbox",
     url = "${sandbox.url}"
 )
-public interface SandboxClient {
+public interface SandboxCliente {
 
     @PostMapping ("/analise")
     String executarAnalise(
