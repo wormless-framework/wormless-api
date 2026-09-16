@@ -17,7 +17,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
   api:
     build: .
     container_name: wormless-api
@@ -31,6 +30,7 @@ services:
       DB_NAME: wormless
       DB_USER: wormless
       DB_PASSWORD: wormless
+      SANDBOX_URL: http://localhost:8081
     ports:
       - "8080:8080"
 
