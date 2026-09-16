@@ -7,7 +7,8 @@ import java.util.Optional;
 
 public interface VulnerabilidadeRepository extends JpaRepository<Vulnerabilidade, Long> { 
     
-    Optional<Vulnerabilidade> findByCve(String cve); List<Vulnerabilidade> findByAmeacaId(Long ameacaId); 
+    Optional<Vulnerabilidade> findByCve(String cve); 
+    List<Vulnerabilidade> findByAmeacaId(Long ameacaId); 
     List<Vulnerabilidade> findByDependenciaScanId(Long dependenciaScanId); 
 
 }

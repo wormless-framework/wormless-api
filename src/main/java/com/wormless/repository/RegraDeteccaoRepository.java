@@ -5,5 +5,6 @@ import java.util.List;
 
 public interface RegraDeteccaoRepository extends JpaRepository<RegraDeteccao, Long> { 
     List<RegraDeteccao> findByAtivaTrue(); 
-    List<RegraDeteccao> findByAtivaFalse(); boolean existsByPadraoAndAtivaTrue(String padrao); 
+    List<RegraDeteccao> findByAtivaFalse(); 
+    boolean existsByPadraoAndAtivaTrue(String padrao); 
 }
