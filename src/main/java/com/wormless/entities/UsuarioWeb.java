@@ -5,15 +5,19 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Getter 
+@Getter
 @Setter
 @Table(name = "usuarios_web")
 public class UsuarioWeb extends Usuario {
 
     @OneToMany(mappedBy = "usuarioWeb")
+    @JsonIgnore
     private List<Arquivo> arquivos = new ArrayList<>();
 }
