@@ -48,7 +48,7 @@ public class AnaliseJob {
     private Arquivo arquivo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pipeline_cicd_id", nullable = false)
+    @JoinColumn(name = "pipeline_cicd_id")
     private PipelineCICD pipelineCICD;
 
     @OneToOne(mappedBy = "analiseJob")

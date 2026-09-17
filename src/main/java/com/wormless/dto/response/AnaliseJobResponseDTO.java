@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,4 +23,6 @@ public class AnaliseJobResponseDTO {
     private Severidade severidade;
 
     private String resumo;
+
+    private List<String> testes;
 }
