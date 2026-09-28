@@ -18,7 +18,7 @@ record LoginResponse(String token, String role) {
 }
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 class AuthController {
 
     private final UserRepository userRepository;
