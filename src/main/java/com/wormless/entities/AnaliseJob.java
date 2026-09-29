@@ -19,6 +19,8 @@ import java.util.List;
 
 import com.wormless.entities.enums.StatusJob;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -51,6 +53,7 @@ public class AnaliseJob {
     @JoinColumn(name = "pipeline_cicd_id")
     private PipelineCICD pipelineCICD;
 
+    @JsonIgnore
     @OneToOne(mappedBy = "analiseJob")
     private RelatorioAmeaca relatorioAmeaca;
 
