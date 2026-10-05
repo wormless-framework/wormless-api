@@ -17,6 +17,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
   api:
     build: .
     container_name: wormless-api
@@ -30,7 +31,9 @@ services:
       DB_NAME: wormless
       DB_USER: wormless
       DB_PASSWORD: wormless
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
       SANDBOX_URL: http://localhost:8081
+      FRONTEND_ORIGIN: http://localhost:5173
     ports:
       - "8080:8080"
 
