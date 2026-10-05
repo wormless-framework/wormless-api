@@ -38,7 +38,7 @@ public class Arquivo {
     private LocalDateTime dataUpload;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_web_id", nullable = false)
+    @JoinColumn(name = "usuario_web_id")
     private UsuarioWeb usuarioWeb;
 
     @OneToOne(mappedBy = "arquivo")
@@ -49,6 +49,6 @@ public class Arquivo {
     }
 
     public boolean validarTamanho() {
-        return tamanho != null && tamanho > 0;
+        return tamanho != null && tamanho > 0 && tamanho <= 100L * 1024 * 1024; // 100 MB
     }
 }

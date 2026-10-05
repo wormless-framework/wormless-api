@@ -7,24 +7,39 @@ import com.wormless.entities.Arquivo;
 import com.wormless.entities.enums.StatusJob;
 import com.wormless.exception.BusinessException;
 import com.wormless.exception.ResourceNotFoundException;
-import com.wormless.integrations.sandbox.SandboxCliente;
+import com.wormless.entities.enums.Severidade;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class SandboxService {
 
+    // Marcador procurado no PDF -> título e descrição do teste
+    private static final Map<String, String> TESTES_PDF = Map.of(
+            "/JavaScript",
+            "JavaScript embutido: o PDF contém código que pode ser executado ao abrir.",
+            "/OpenAction",
+            "Ação automática: o PDF executa uma ação assim que é aberto.",
+            "/Launch",
+            "Execução de programa: o PDF tenta abrir um programa externo.",
+            "/EmbeddedFile",
+            "Arquivo embutido: o PDF carrega outro arquivo dentro dele."
+    );
+
     private final ArquivoService arquivoService;
     private final AnaliseJobService analiseJobService;
-    private final SandboxCliente sandboxCliente;
 
     @Transactional
     public AnaliseJobResponseDTO iniciarAnalise(
@@ -39,6 +54,13 @@ public class SandboxService {
         if (uploadDTO.getArquivo().isEmpty()) {
             throw new BusinessException(
                     "O arquivo enviado está vazio."
+            );
+        }
+
+        if (!"application/pdf".equals(
+                uploadDTO.getArquivo().getContentType())) {
+            throw new BusinessException(
+                    "Apenas arquivos PDF são aceitos."
             );
         }
 
@@ -88,17 +110,27 @@ public class SandboxService {
             // Coloca a análise em processamento
             analiseJobService.iniciar(jobSalvo.getId());
 
-            // Envia o arquivo para o Sandbox externo
-            String resultadoBruto =
-                    sandboxCliente.executarAnalise(arquivoUpload);
+            // Executa os testes de segurança no conteúdo do PDF
+            String conteudo = new String(
+                    Files.readAllBytes(caminhoTemporario),
+                    StandardCharsets.ISO_8859_1
+            );
 
-            // Guarda o resultado do Sandbox para uso futuro pela IA
-            jobSalvo.setResultadoBruto(resultadoBruto);
+            List<String> testesDetectados = new ArrayList<>();
+
+            TESTES_PDF.forEach((marcador, descricao) -> {
+                if (conteudo.contains(marcador)) {
+                    testesDetectados.add(descricao);
+                }
+            });
+
+            // Guarda um teste detectado por linha
+            jobSalvo.setResultadoBruto(
+                    String.join("\n", testesDetectados)
+            );
 
             analiseJobService.salvar(jobSalvo);
 
-            // Nesta sprint, a análise termina após o processamento do Sandbox.
-            // A interpretação pela IA será adicionada na próxima sprint.
             analiseJobService.concluir(jobSalvo.getId());
 
             return consultarResultado(jobSalvo.getId());
@@ -137,7 +169,17 @@ public class SandboxService {
             AnaliseJob job) {
 
         String resumo;
-        boolean ameacaDetectada = false;
+
+        List<String> testes =
+                job.getResultadoBruto() == null || job.getResultadoBruto().isBlank()
+                        ? List.of()
+                        : List.of(job.getResultadoBruto().split("\n"));
+
+        boolean ameacaDetectada = !testes.isEmpty();
+
+        // Risco pela quantidade de testes detectados: 0 = BAIXA ... 3 ou mais = CRITICA
+        int nivel = Math.min(testes.size(), Severidade.values().length - 1);
+        Severidade severidade = Severidade.values()[nivel];
 
         switch (job.getStatus()) {
 
@@ -169,8 +211,9 @@ public class SandboxService {
                 job.getId(),
                 job.getStatus().name(),
                 ameacaDetectada,
-                null,
-                resumo
+                severidade,
+                resumo,
+                testes
         );
     }
 }
