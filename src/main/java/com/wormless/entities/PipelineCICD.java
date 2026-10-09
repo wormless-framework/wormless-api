@@ -13,6 +13,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,6 +29,7 @@ public class PipelineCICD {
 
     private String repositorio;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "pipelineCICD")
     private List<AnaliseJob> analiseJobs = new ArrayList<>();
 }

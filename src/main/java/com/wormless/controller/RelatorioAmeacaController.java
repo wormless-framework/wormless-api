@@ -57,4 +57,13 @@ public class RelatorioAmeacaController {
                 relatorioAmeacaService.listarPorSeveridade(severidade)
         );
     }
+
+    @GetMapping("/analise/{analiseId}")
+    public ResponseEntity<RelatorioAmeaca> buscarPorAnaliseId(
+            @PathVariable Long analiseId) {
+
+        return ResponseEntity.ok(
+                relatorioAmeacaService.buscarPorAnaliseId(analiseId)
+        );
+    }
 }

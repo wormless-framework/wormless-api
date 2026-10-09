@@ -34,6 +34,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
       SANDBOX_URL: http://localhost:8081
       FRONTEND_ORIGIN: http://localhost:5173
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     ports:
       - "8080:8080"
 

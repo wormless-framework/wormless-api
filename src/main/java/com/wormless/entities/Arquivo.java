@@ -15,6 +15,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -41,6 +43,7 @@ public class Arquivo {
     @JoinColumn(name = "usuario_web_id")
     private UsuarioWeb usuarioWeb;
 
+    @JsonIgnore
     @OneToOne(mappedBy = "arquivo")
     private AnaliseJob analiseJob;
 

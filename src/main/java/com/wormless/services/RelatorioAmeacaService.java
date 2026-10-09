@@ -58,6 +58,21 @@ public class RelatorioAmeacaService {
     }
 
     @Transactional(readOnly = true)
+    public RelatorioAmeaca buscarPorAnaliseId(Long analiseId) {
+        if (analiseId == null) {
+            throw new BusinessException("O ID da análise deve ser informado.");
+        }
+        
+        List<RelatorioAmeaca> relatorios = relatorioRepository.findByAnaliseJobId(analiseId);
+        
+        if (relatorios.isEmpty()) {
+            throw new ResourceNotFoundException("Nenhum relatório encontrado para a análise: " + analiseId);
+        }
+        
+        return relatorios.get(0); // Assume que é 1 para 1
+    }
+
+    @Transactional(readOnly = true)
     public String gerarResumo(Long id) {
 
         return buscarPorId(id).gerarResumo();
