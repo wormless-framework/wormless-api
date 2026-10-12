@@ -8,6 +8,9 @@ import com.wormless.entities.enums.StatusJob;
 import com.wormless.exception.BusinessException;
 import com.wormless.exception.ResourceNotFoundException;
 import com.wormless.entities.enums.Severidade;
+import com.wormless.entities.RelatorioAmeaca;
+import com.wormless.services.AnaliseIAService;
+import com.wormless.services.RelatorioAmeacaService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,8 +41,10 @@ public class SandboxService {
             "Arquivo embutido: o PDF carrega outro arquivo dentro dele."
     );
 
-    private final ArquivoService arquivoService;
-    private final AnaliseJobService analiseJobService;
+        private final ArquivoService arquivoService;
+        private final AnaliseJobService analiseJobService;
+        private final AnaliseIAService analiseIAService;
+        private final RelatorioAmeacaService relatorioAmeacaService;
 
     @Transactional
     public AnaliseJobResponseDTO iniciarAnalise(
@@ -130,6 +135,16 @@ public class SandboxService {
             );
 
             analiseJobService.salvar(jobSalvo);
+
+            // A IA gera o relatório forense detalhado com base no que a sandbox encontrou
+            RelatorioAmeaca relatorio = analiseIAService.analisar(
+                jobSalvo.getResultadoBruto(), 
+                jobSalvo
+            );
+
+            // Salvamos o relatório completo na base de dados
+                
+            relatorioAmeacaService.salvar(relatorio);
 
             analiseJobService.concluir(jobSalvo.getId());
 

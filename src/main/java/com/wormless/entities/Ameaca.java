@@ -10,10 +10,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.wormless.entities.enums.Severidade;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,14 +39,17 @@ public class Ameaca {
 
     private String tipo;
 
+    @Column(columnDefinition = "TEXT")
     private String comoAge;
 
     @Enumerated(EnumType.STRING)
     private Severidade severidade;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "ameaca")
     private List<IndicadorAmeaca> indicadores = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "ameaca")
     private List<Vulnerabilidade> vulnerabilidades = new ArrayList<>();
 

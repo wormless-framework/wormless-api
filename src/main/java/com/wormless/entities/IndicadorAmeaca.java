@@ -2,6 +2,8 @@ package com.wormless.entities;
 
 import com.wormless.entities.enums.StatusIndicador;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -38,6 +40,7 @@ public class IndicadorAmeaca {
     @Enumerated(EnumType.STRING)
     private StatusIndicador status = StatusIndicador.ATIVO;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "relatorio_ameaca_id", nullable = false)
     private RelatorioAmeaca relatorioAmeaca;

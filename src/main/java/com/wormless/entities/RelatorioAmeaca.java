@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,7 @@ public class RelatorioAmeaca {
     @Enumerated(EnumType.STRING)
     private Severidade severidadeGeral;
 
+    @Column(columnDefinition = "TEXT")
     private String resumo;
 
     @OneToOne
