@@ -56,4 +56,16 @@ public class SandboxController {
         List<ArquivoSuspeitoDTO> suspeitos = repositorioScannerService.fazerTriagemRapida(request);
         return ResponseEntity.ok(suspeitos);
     }
+
+    @PostMapping("/repositorio/deep-scan")
+    public ResponseEntity<AnaliseJobResponseDTO> deepScanRepositorio(
+            @Valid @RequestBody RepositorioRequestDTO request) {
+        
+        AnaliseJobResponseDTO response = sandboxService.iniciarAnaliseDeRepositorio(
+                request.getUrl(), 
+                request.getCaminhoArquivo()
+        );
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 }

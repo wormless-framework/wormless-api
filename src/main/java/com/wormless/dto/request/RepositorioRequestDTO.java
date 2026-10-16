@@ -11,6 +11,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RepositorioRequestDTO {
+    
     @NotBlank(message = "A URL do repositório deve ser informada.")
     private String url;
+
+    private String caminhoArquivo;
 }
