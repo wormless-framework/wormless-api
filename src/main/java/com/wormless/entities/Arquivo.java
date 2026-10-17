@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.wormless.security.User;
 
 @Getter
 @Setter
@@ -42,6 +43,11 @@ public class Arquivo {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_web_id")
     private UsuarioWeb usuarioWeb;
+
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "auth_user_id")
+    private User proprietario;
 
     @JsonIgnore
     @OneToOne(mappedBy = "arquivo")
