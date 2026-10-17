@@ -39,5 +39,10 @@
         <Bug pattern="CT_CONSTRUCTOR_THROW" />
         <Class name="com.wormless.services.AnaliseIAServiceImpl" />
     </Match>
+    <!-- ObjectMapper é um singleton configurado pelo Spring e injetado no serviço. -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2" />
+        <Class name="com.wormless.services.AnaliseIAServiceImpl" />
+    </Match>
 
 </FindBugsFilter>
