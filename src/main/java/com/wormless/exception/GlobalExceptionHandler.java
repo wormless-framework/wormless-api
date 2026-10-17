@@ -62,10 +62,12 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(Exception.class)
+   @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception exception,
             HttpServletRequest request) {
+
+        log.error("Erro interno no servidor capturado:", exception);
 
         ErrorResponse response = new ErrorResponse(
                 LocalDateTime.now(),

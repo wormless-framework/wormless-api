@@ -180,6 +180,71 @@ public class SandboxService {
         return criarResponse(job);
     }
 
+    @Transactional
+    public AnaliseJobResponseDTO iniciarAnaliseDeRepositorio(String repoUrl, String caminhoArquivo) {
+        java.nio.file.Path diretorioTemp = null;
+        try {
+            diretorioTemp = java.nio.file.Files.createTempDirectory("wormless-deepscan-");
+            
+            // Faz o clone apenas com a profundidade 1 (mais rápido)
+            org.eclipse.jgit.api.Git.cloneRepository()
+                    .setURI(repoUrl)
+                    .setDirectory(diretorioTemp.toFile())
+                    .setDepth(1)
+                    .call();
+
+            java.nio.file.Path arquivoFisico = diretorioTemp.resolve(caminhoArquivo);
+            if (!java.nio.file.Files.exists(arquivoFisico)) {
+                throw new BusinessException("Ficheiro não encontrado no repositório clonado.");
+            }
+
+            // Registra o arquivo na base de dados
+            Arquivo arquivo = new Arquivo();
+            arquivo.setNomeOriginal(arquivoFisico.getFileName().toString());
+            arquivo.setTamanho(java.nio.file.Files.size(arquivoFisico));
+            arquivo.setTipoMime("application/octet-stream");
+            arquivo.setCaminhoTemporario(arquivoFisico.toString());
+            arquivo.setDataUpload(java.time.LocalDateTime.now());
+            Arquivo arquivoSalvo = arquivoService.salvar(arquivo);
+
+            // Cria o Job de Análise
+            AnaliseJob job = new AnaliseJob();
+            job.setArquivo(arquivoSalvo);
+            job.setStatus(StatusJob.PENDENTE);
+            AnaliseJob jobSalvo = analiseJobService.salvar(job);
+
+            analiseJobService.iniciar(jobSalvo.getId());
+
+            // Lê o conteúdo bruto do arquivo com o encoding correto
+            String conteudo = new String(java.nio.file.Files.readAllBytes(arquivoFisico), java.nio.charset.StandardCharsets.ISO_8859_1);
+            
+            // Trunca se for muito grande para evitar Timeout da API do Gemini
+            if (conteudo.length() > 6000) {
+                conteudo = conteudo.substring(0, 6000) + "\n...[TRUNCADO]";
+            }
+            
+            jobSalvo.setResultadoBruto(conteudo);
+            analiseJobService.salvar(jobSalvo);
+
+            // Envia o conteúdo bruto do arquivo diretamente para a IA
+            RelatorioAmeaca relatorio = analiseIAService.analisar(jobSalvo.getResultadoBruto(), jobSalvo);
+            relatorioAmeacaService.salvar(relatorio);
+
+            analiseJobService.concluir(jobSalvo.getId());
+
+            return consultarResultado(jobSalvo.getId());
+
+        } catch (Exception e) {
+            throw new BusinessException("Falha ao analisar ficheiro do repositório: " + e.getMessage());
+        } finally {
+            if (diretorioTemp != null) {
+                try {
+                    org.springframework.util.FileSystemUtils.deleteRecursively(diretorioTemp);
+                } catch (Exception ignored) {}
+            }
+        }
+    }
+
     private AnaliseJobResponseDTO criarResponse(
             AnaliseJob job) {
 
