@@ -81,7 +81,7 @@ public class RepositorioScannerService {
     }
 
     
-   private String analisarConteudo(String nomeArquivo, String conteudo) {
+    private String analisarConteudo(String nomeArquivo, String conteudo) {
         String nomeMinusculo = nomeArquivo.toLowerCase();
 
         if (nomeMinusculo.endsWith(".pdf")) {
