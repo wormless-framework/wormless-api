@@ -6,6 +6,8 @@ import com.wormless.dto.response.AnaliseJobResponseDTO;
 import com.wormless.dto.response.ArquivoSuspeitoDTO;
 import com.wormless.services.RepositorioScannerService;
 import com.wormless.services.SandboxService;
+import com.wormless.security.User;
+import com.wormless.security.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/sandbox")
@@ -27,13 +30,19 @@ public class SandboxController {
 
     private final SandboxService sandboxService;
     private final RepositorioScannerService repositorioScannerService;
+    private final UserRepository userRepository;
 
     @PostMapping("/analises")
     public ResponseEntity<AnaliseJobResponseDTO> iniciarAnalise(
-            @Valid @ModelAttribute ArquivoUploadDTO uploadDTO) {
+            @Valid @ModelAttribute ArquivoUploadDTO uploadDTO,
+            Principal principal) {
+
+        User proprietario = principal == null ? null : userRepository.findByEmail(principal.getName())
+                .orElseThrow(() ->
+                                    new IllegalArgumentException("Usuário autenticado não encontrado."));
 
         AnaliseJobResponseDTO response =
-                sandboxService.iniciarAnalise(uploadDTO);
+                sandboxService.iniciarAnalise(uploadDTO, proprietario);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -42,10 +51,16 @@ public class SandboxController {
 
     @GetMapping("/analises/{id}")
     public ResponseEntity<AnaliseJobResponseDTO> consultarResultado(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            Principal principal) {
 
         return ResponseEntity.ok(
-                sandboxService.consultarResultado(id)
+                sandboxService.consultarResultadoDoUsuario(
+                        id,
+                        userRepository.findByEmail(principal.getName())
+                                .orElseThrow(() ->
+                                    new IllegalArgumentException("Usuário autenticado não encontrado."))
+                                .getId())
         );
     }
 
@@ -60,12 +75,12 @@ public class SandboxController {
     @PostMapping("/repositorio/deep-scan")
     public ResponseEntity<AnaliseJobResponseDTO> deepScanRepositorio(
             @Valid @RequestBody RepositorioRequestDTO request) {
-        
+
         AnaliseJobResponseDTO response = sandboxService.iniciarAnaliseDeRepositorio(
-                request.getUrl(), 
+                request.getUrl(),
                 request.getCaminhoArquivo()
         );
-        
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

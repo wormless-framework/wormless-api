@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-record RegisterRequest(String email, String password, Role role) {
+record RegisterRequest(String email, String password) {
 }
 
 record LoginRequest(String email, String password) {
@@ -33,11 +33,11 @@ class AuthController {
 
     @PostMapping("/register")
     ResponseEntity<Void> register(@RequestBody RegisterRequest request) {
-        if (request.email() == null || request.password() == null || request.role() == null) {
-            throw new IllegalArgumentException("email, password e role sao obrigatorios");
+        if (request.email() == null || request.password() == null) {
+            throw new IllegalArgumentException("email e password sao obrigatorios");
         }
 
-        User user = new User(request.email(), passwordEncoder.encode(request.password()), request.role());
+        User user = new User(request.email(), passwordEncoder.encode(request.password()), Role.CLIENT);
         userRepository.save(user);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();

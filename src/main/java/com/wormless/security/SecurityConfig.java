@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -38,6 +39,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/sandbox/analises").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/sandbox/repositorio/triagem").permitAll()
 
                         .requestMatchers("/sandbox/**")
                         .hasAnyRole(Role.CLIENT.name(), Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
@@ -46,6 +49,11 @@ public class SecurityConfig {
                         .hasAnyRole(Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
 
                         .requestMatchers("/admin/**").hasRole(Role.SOC_ADMIN.name())
+                        .requestMatchers("/me/**")
+                        .hasAnyRole(Role.CLIENT.name(), Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
+                        .requestMatchers("/relatorios/**").hasAnyRole(Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
+                        .requestMatchers("/analises/**", "/arquivos/**")
+                        .hasAnyRole(Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
 
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
