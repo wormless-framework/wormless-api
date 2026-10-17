@@ -1,41 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
 
-    <!--
-        Exposição de referências internas em DTOs e entidades.
-        Esses acessos são intencionais no modelo JPA/Lombok.
-    -->
+    <!-- Exposição intencional de referências em DTOs. -->
     <Match>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
         <Class name="~.*\.dto\..*" />
     </Match>
 
-    <!--
-        Entidades JPA:
-        getters/setters de relacionamentos e coleções são necessários
-        para o funcionamento e mapeamento das entidades.
-    -->
+    <!-- Getters e setters de relacionamentos e coleções são necessários no JPA. -->
     <Match>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
-        <Class name="com.wormless.entities.*" />
+        <Class name="~com\.wormless\.entities\..*" />
     </Match>
 
-    <!--
-        Classes geradas (ex: MapStruct, Lombok @Builder)
-        não precisam de análise.
-    -->
+    <!-- Classes geradas, como implementações de mappers. -->
     <Match>
         <Class name="~.*MapperImpl" />
     </Match>
 
-    <!--
-        Exemplo: ignorar um bug específico em uma classe específica.
-    -->
-    <!--
+    <!-- O filtro é um bean gerenciado pelo Spring e armazenado pela configuração de segurança. -->
     <Match>
-        <Class name="com.exemplo.sgam.service.ArquivoService" />
-        <Bug pattern="SE_BAD_FIELD" />
+        <Bug pattern="EI_EXPOSE_REP2" />
+        <Class name="com.wormless.security.SecurityConfig" />
     </Match>
-    -->
+
+    <!-- A construção da chave valida a configuração e deve falhar rápido se o segredo for inválido. -->
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW" />
+        <Class name="com.wormless.security.JwtService" />
+    </Match>
+
+    <!-- O construtor gerado pelo Lombok apenas injeta dependências nos serviços Spring. -->
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW" />
+        <Class name="com.wormless.services.SandboxService" />
+    </Match>
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW" />
+        <Class name="com.wormless.services.AnaliseIAServiceImpl" />
+    </Match>
 
 </FindBugsFilter>
