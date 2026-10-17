@@ -11,6 +11,7 @@ import com.wormless.entities.enums.Severidade;
 import com.wormless.entities.RelatorioAmeaca;
 import com.wormless.security.User;
 import com.wormless.repository.AnaliseJobRepository;
+import org.eclipse.jgit.api.errors.GitAPIException;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -193,6 +194,9 @@ public class SandboxService {
 
     @Transactional
     public AnaliseJobResponseDTO iniciarAnaliseDeRepositorio(String repoUrl, String caminhoArquivo) {
+        if (repoUrl == null || repoUrl.isBlank() || caminhoArquivo == null || caminhoArquivo.isBlank()) {
+            throw new BusinessException("A URL do repositório e o caminho do arquivo são obrigatórios.");
+        }
         java.nio.file.Path diretorioTemp = null;
         try {
             diretorioTemp = java.nio.file.Files.createTempDirectory("wormless-deepscan-");
@@ -204,14 +208,20 @@ public class SandboxService {
                     .setDepth(1)
                     .call();
 
-            java.nio.file.Path arquivoFisico = diretorioTemp.resolve(caminhoArquivo);
-            if (!java.nio.file.Files.exists(arquivoFisico)) {
+            java.nio.file.Path raizRepositorio = diretorioTemp.toRealPath();
+            java.nio.file.Path arquivoFisico = diretorioTemp.resolve(caminhoArquivo).toRealPath();
+            if (!arquivoFisico.startsWith(raizRepositorio)
+                    || !java.nio.file.Files.isRegularFile(arquivoFisico)) {
                 throw new BusinessException("Ficheiro não encontrado no repositório clonado.");
             }
 
             // Registra o arquivo na base de dados
             Arquivo arquivo = new Arquivo();
-            arquivo.setNomeOriginal(arquivoFisico.getFileName().toString());
+            java.nio.file.Path nomeArquivo = arquivoFisico.getFileName();
+            if (nomeArquivo == null) {
+                throw new BusinessException("O caminho informado não é um arquivo válido.");
+            }
+            arquivo.setNomeOriginal(nomeArquivo.toString());
             arquivo.setTamanho(java.nio.file.Files.size(arquivoFisico));
             arquivo.setTipoMime("application/octet-stream");
             arquivo.setCaminhoTemporario(arquivoFisico.toString());
@@ -248,14 +258,14 @@ public class SandboxService {
 
             return consultarResultado(jobSalvo.getId());
 
-        } catch (Exception e) {
+        } catch (IOException | GitAPIException e) {
             throw new BusinessException(
                     "Falha ao analisar ficheiro do repositório: " + e.getMessage());
         } finally {
             if (diretorioTemp != null) {
                 try {
                     org.springframework.util.FileSystemUtils.deleteRecursively(diretorioTemp);
-                } catch (Exception ignored) {
+                } catch (IOException ignored) {
                     // Ignora falha de limpeza do diretório temporário.
                 }
             }

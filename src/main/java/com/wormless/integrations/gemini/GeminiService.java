@@ -22,7 +22,7 @@ public class GeminiService {
                          @Value("${gemini.models}") List<String> modelos) {
         this.cliente = cliente;
         this.apiKey = apiKey;
-        this.modelos = modelos;
+        this.modelos = List.copyOf(modelos);
     }
 
     public GeminiResponse gerar(GeminiRequest request) {

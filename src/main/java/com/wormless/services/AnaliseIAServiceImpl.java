@@ -31,7 +31,7 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
     private final VulnerabilidadeService vulnerabilidadeService;
     private final GeminiService geminiService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -47,24 +47,28 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
             return relatorio;
         }
 
-        String prompt = """
-            És um analista sênior de SOC e especialista forense. Analisa o seguinte log
-            detetado numa Sandbox estática de um ficheiro PDF:
+        String promptTemplate = String.join(
+                System.lineSeparator(),
+                List.of(
+                    "És um analista sênior de SOC e especialista forense. Analisa o seguinte log",
+                    "detetado numa Sandbox estática de um ficheiro PDF:",
+                    "",
+                    "%s",
+                    "",
+                    "Com base nisto, age como uma API e devolve APENAS um JSON válido. Não utilizes formatação ",
+                    "Markdown (como ```json).",
+                    "O JSON deve ter exatamente estas chaves:",
+                    "\"severidadeGeral\": (deve ser BAIXA, MEDIA, ALTA ou CRITICA),",
+                    "\"resumo\": \"Um resumo executivo da ameaça e do seu impacto potencial\",",
+                    "\"nomeAmeaca\": \"Nome técnico da ameaça detetada\",",
+                    "\"tipoAmeaca\": \"Família ou tipo (ex: Malware, Phishing, Dropper)\",",
+                    "\"comoAge\": \"Explicação técnica detalhada de como o atacante exploraria isto\",",
+                    "\"cve\": \"Código CVE provável ou 'N/A' se for falha arquitetural\",",
+                    "\"descricaoVuln\": \"Explicação da vulnerabilidade\",",
+                    "\"remediacao\": \"Passos técnicos detalhados e enumerados para resolver a ameaça\""
+                ));
 
-            %s
-
-            Com base nisto, age como uma API e devolve APENAS um JSON válido. Não utilizes formatação 
-            Markdown (como ```json).
-            O JSON deve ter exatamente estas chaves:
-            "severidadeGeral": (deve ser BAIXA, MEDIA, ALTA ou CRITICA),
-            "resumo": "Um resumo executivo da ameaça e do seu impacto potencial",
-            "nomeAmeaca": "Nome técnico da ameaça detetada",
-            "tipoAmeaca": "Família ou tipo (ex: Malware, Phishing, Dropper)",
-            "comoAge": "Explicação técnica detalhada de como o atacante exploraria isto",
-            "cve": "Código CVE provável ou 'N/A' se for falha arquitetural",
-            "descricaoVuln": "Explicação da vulnerabilidade",
-            "remediacao": "Passos técnicos detalhados e enumerados para resolver a ameaça"
-            """.formatted(resultadoBruto);
+        String prompt = promptTemplate.formatted(resultadoBruto);
 
         JsonNode iaNode;
 
