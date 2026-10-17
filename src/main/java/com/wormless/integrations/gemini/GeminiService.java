@@ -11,7 +11,7 @@ import java.util.List;
 @Service
 public class GeminiService {
 
-    private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GeminiService.class);
 
     private final GeminiCliente cliente;
     private final String apiKey;
@@ -34,10 +34,14 @@ public class GeminiService {
                     return cliente.gerarConteudo(modelo.trim(), apiKey, request);
                 } catch (FeignException e) {
                     ultimoErro = e;
-                    log.warn("Modelo {} falhou (status {}), tentativa {}", modelo, e.status(), tentativa);
+                    LOG.warn("Modelo {} falhou (status {}), tentativa {}", modelo, e.status(), tentativa);
 
-                    if (e.status() == 404) break;                    // modelo inexistente: próximo
-                    if (!deveTentarNovamente(e.status())) throw e;   // 400/401/403: não adianta insistir
+                    if (e.status() == 404) {
+                        break; // modelo inexistente: próximo
+                    }
+                    if (!deveTentarNovamente(e.status())) {
+                        throw e; // 400/401/403: não adianta insistir
+                    }
 
                     dormir(500L * tentativa);
                 }
