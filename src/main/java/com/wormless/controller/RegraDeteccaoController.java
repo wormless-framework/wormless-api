@@ -48,6 +48,13 @@ public class RegraDeteccaoController {
         );
     }
 
+    @GetMapping
+    public ResponseEntity<List<RegraDeteccao>> listarTodas() {
+        return ResponseEntity.ok(
+                regraDeteccaoService.listarTodas()
+        );
+    }
+
     @PutMapping("/{id}/ignorar")
     public ResponseEntity<RegraDeteccao> ignorarEmMetricasFuturas(
             @PathVariable Long id) {

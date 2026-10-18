@@ -93,7 +93,6 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
             return relatorio;
         }
 
-        // Gravar na base de dados fora do catch
         relatorio.setSeveridadeGeral(parseSeveridade(iaNode.path("severidadeGeral").asText()));
         relatorio.setResumo(iaNode.path("resumo").asText());
 

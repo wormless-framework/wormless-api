@@ -35,6 +35,11 @@ public class RegraDeteccaoService {
         return regraRepository.findByAtivaTrue();
     }
 
+    @Transactional(readOnly = true)
+    public List<RegraDeteccao> listarTodas() {
+        return regraRepository.findAll();
+    }
+
     public RegraDeteccao ignorarEmMetricasFuturas(Long id) {
         RegraDeteccao regra = buscarPorId(id);
 
