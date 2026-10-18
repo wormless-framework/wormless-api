@@ -68,6 +68,23 @@ public class FalsoPositivoService {
         return falsoPositivoRepository.save(falsoPositivo);
     }
 
+    public void excluir(Long id) {
+        FalsoPositivo falsoPositivo = buscarPorId(id);
+
+        // 1. Reverter o status do Indicador de volta para ATIVO
+        if (falsoPositivo.getIndicadorAmeaca() != null) {
+            falsoPositivo.getIndicadorAmeaca().setStatus(com.wormless.entities.enums.StatusIndicador.ATIVO);
+        }
+
+        // 2. Reativar a Regra de Detecção
+        if (falsoPositivo.getRegraDeteccao() != null) {
+            falsoPositivo.getRegraDeteccao().setAtiva(true);
+        }
+
+        // 3. Excluir o registo do falso positivo
+        falsoPositivoRepository.delete(falsoPositivo);
+    }
+
     @Transactional(readOnly = true)
     public FalsoPositivo buscarPorId(Long id) {
         return falsoPositivoRepository.findById(id)
