@@ -87,7 +87,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: SEU_USUARIO/wormless-api@v1
+      - uses: wormless-framework/wormless-api@v1
         with:
           api-url: ${{ vars.WORMLESS_API_URL }}
           oidc-audience: api://wormless
