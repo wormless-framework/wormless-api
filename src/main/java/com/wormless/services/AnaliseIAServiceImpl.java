@@ -42,7 +42,7 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
         }
 
         String prompt = """
-            És um analista sênior de SOC e especialista forense. Analisa o seguinte log detetado numa Sandbox estática de um ficheiro PDF:
+            Voce é um analista sênior de SOC e especialista forense. Analisa o seguinte log detetado numa Sandbox estática de um ficheiro PDF:
 
             %s
 
@@ -79,7 +79,6 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
             return relatorio;
         }
 
-        // Gravar na base de dados fora do catch
         relatorio.setSeveridadeGeral(parseSeveridade(iaNode.path("severidadeGeral").asText()));
         relatorio.setResumo(iaNode.path("resumo").asText());
 

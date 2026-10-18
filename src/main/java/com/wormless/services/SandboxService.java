@@ -11,6 +11,8 @@ import com.wormless.entities.enums.Severidade;
 import com.wormless.entities.RelatorioAmeaca;
 import com.wormless.services.AnaliseIAService;
 import com.wormless.services.RelatorioAmeacaService;
+import com.wormless.entities.PipelineCICD;
+import com.wormless.repository.PipelineCICDRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,7 @@ public class SandboxService {
         private final AnaliseJobService analiseJobService;
         private final AnaliseIAService analiseIAService;
         private final RelatorioAmeacaService relatorioAmeacaService;
+        private final PipelineCICDRepository pipelineCICDRepository;
 
     @Transactional
     public AnaliseJobResponseDTO iniciarAnalise(
@@ -80,37 +83,18 @@ public class SandboxService {
             arquivoUpload.transferTo(caminhoTemporario);
 
             Arquivo arquivo = new Arquivo();
+            arquivo.setNomeOriginal(arquivoUpload.getOriginalFilename());
+            arquivo.setTamanho(arquivoUpload.getSize());
+            arquivo.setTipoMime(arquivoUpload.getContentType());
+            arquivo.setCaminhoTemporario(caminhoTemporario.toString());
+            arquivo.setDataUpload(LocalDateTime.now());
 
-            arquivo.setNomeOriginal(
-                    arquivoUpload.getOriginalFilename()
-            );
-
-            arquivo.setTamanho(
-                    arquivoUpload.getSize()
-            );
-
-            arquivo.setTipoMime(
-                    arquivoUpload.getContentType()
-            );
-
-            arquivo.setCaminhoTemporario(
-                    caminhoTemporario.toString()
-            );
-
-            arquivo.setDataUpload(
-                    LocalDateTime.now()
-            );
-
-            Arquivo arquivoSalvo =
-                    arquivoService.salvar(arquivo);
+            Arquivo arquivoSalvo = arquivoService.salvar(arquivo);
 
             AnaliseJob job = new AnaliseJob();
-
             job.setArquivo(arquivoSalvo);
             job.setStatus(StatusJob.PENDENTE);
-
-            AnaliseJob jobSalvo =
-                    analiseJobService.salvar(job);
+            AnaliseJob jobSalvo = analiseJobService.salvar(job);
 
             // Coloca a análise em processamento
             analiseJobService.iniciar(jobSalvo.getId());
@@ -129,23 +113,15 @@ public class SandboxService {
                 }
             });
 
-            // Guarda um teste detectado por linha
-            jobSalvo.setResultadoBruto(
-                    String.join("\n", testesDetectados)
-            );
-
+            jobSalvo.setResultadoBruto(String.join("\n", testesDetectados));
             analiseJobService.salvar(jobSalvo);
 
-            // A IA gera o relatório forense detalhado com base no que a sandbox encontrou
             RelatorioAmeaca relatorio = analiseIAService.analisar(
                 jobSalvo.getResultadoBruto(), 
                 jobSalvo
             );
-
-            // Salvamos o relatório completo na base de dados
                 
             relatorioAmeacaService.salvar(relatorio);
-
             analiseJobService.concluir(jobSalvo.getId());
 
             return consultarResultado(jobSalvo.getId());
@@ -186,7 +162,6 @@ public class SandboxService {
         try {
             diretorioTemp = java.nio.file.Files.createTempDirectory("wormless-deepscan-");
             
-            // Faz o clone apenas com a profundidade 1 (mais rápido)
             org.eclipse.jgit.api.Git.cloneRepository()
                     .setURI(repoUrl)
                     .setDirectory(diretorioTemp.toFile())
@@ -198,7 +173,6 @@ public class SandboxService {
                 throw new BusinessException("Ficheiro não encontrado no repositório clonado.");
             }
 
-            // Registra o arquivo na base de dados
             Arquivo arquivo = new Arquivo();
             arquivo.setNomeOriginal(arquivoFisico.getFileName().toString());
             arquivo.setTamanho(java.nio.file.Files.size(arquivoFisico));
@@ -207,18 +181,24 @@ public class SandboxService {
             arquivo.setDataUpload(java.time.LocalDateTime.now());
             Arquivo arquivoSalvo = arquivoService.salvar(arquivo);
 
-            // Cria o Job de Análise
+            // ---> LÓGICA DO PIPELINE AQUI <---
+            PipelineCICD pipeline = pipelineCICDRepository.findByRepositorio(repoUrl)
+                    .orElseGet(() -> {
+                        PipelineCICD novo = new PipelineCICD();
+                        novo.setRepositorio(repoUrl);
+                        return pipelineCICDRepository.save(novo);
+                    });
+
             AnaliseJob job = new AnaliseJob();
             job.setArquivo(arquivoSalvo);
+            job.setPipelineCICD(pipeline); // Vincula o repositório à análise
             job.setStatus(StatusJob.PENDENTE);
             AnaliseJob jobSalvo = analiseJobService.salvar(job);
 
             analiseJobService.iniciar(jobSalvo.getId());
 
-            // Lê o conteúdo bruto do arquivo com o encoding correto
             String conteudo = new String(java.nio.file.Files.readAllBytes(arquivoFisico), java.nio.charset.StandardCharsets.ISO_8859_1);
             
-            // Trunca se for muito grande para evitar Timeout da API do Gemini
             if (conteudo.length() > 6000) {
                 conteudo = conteudo.substring(0, 6000) + "\n...[TRUNCADO]";
             }
@@ -226,7 +206,6 @@ public class SandboxService {
             jobSalvo.setResultadoBruto(conteudo);
             analiseJobService.salvar(jobSalvo);
 
-            // Envia o conteúdo bruto do arquivo diretamente para a IA
             RelatorioAmeaca relatorio = analiseIAService.analisar(jobSalvo.getResultadoBruto(), jobSalvo);
             relatorioAmeacaService.salvar(relatorio);
 
