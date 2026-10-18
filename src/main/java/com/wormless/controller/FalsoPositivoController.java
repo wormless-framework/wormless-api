@@ -1,7 +1,9 @@
 package com.wormless.controller;
 
+import com.wormless.dto.request.MarcarFalsoPositivoDTO;
 import com.wormless.entities.FalsoPositivo;
 import com.wormless.services.FalsoPositivoService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,15 @@ import java.util.List;
 public class FalsoPositivoController {
 
     private final FalsoPositivoService falsoPositivoService;
+
+    @PostMapping("/marcar")
+    public ResponseEntity<FalsoPositivo> marcarFalsoPositivo(
+            @Valid @RequestBody MarcarFalsoPositivoDTO dto) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(falsoPositivoService.marcarComoFalsoPositivo(dto));
+    }
 
     @PostMapping
     public ResponseEntity<FalsoPositivo> salvar(
