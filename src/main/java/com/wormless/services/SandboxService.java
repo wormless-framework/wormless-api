@@ -9,8 +9,6 @@ import com.wormless.exception.BusinessException;
 import com.wormless.exception.ResourceNotFoundException;
 import com.wormless.entities.enums.Severidade;
 import com.wormless.entities.RelatorioAmeaca;
-import com.wormless.services.AnaliseIAService;
-import com.wormless.services.RelatorioAmeacaService;
 import com.wormless.entities.PipelineCICD;
 import com.wormless.repository.PipelineCICDRepository;
 import com.wormless.security.User;

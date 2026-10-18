@@ -66,7 +66,10 @@ public class FalsoPositivo {
 
     public String getOrigemRepositorio() {
         try {
-            com.wormless.entities.PipelineCICD pipeline = this.indicadorAmeaca.getRelatorioAmeaca().getAnaliseJob().getPipelineCICD();
+            PipelineCICD pipeline = this.indicadorAmeaca
+                .getRelatorioAmeaca()
+                .getAnaliseJob()
+                .getPipelineCICD();
             return pipeline != null ? pipeline.getRepositorio() : "Upload Manual";
         } catch (Exception e) {
             return "N/A";
