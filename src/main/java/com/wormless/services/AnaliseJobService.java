@@ -5,6 +5,9 @@ import com.wormless.entities.enums.StatusJob;
 import com.wormless.repository.AnaliseJobRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.wormless.dto.response.HistoricoRelatorioDTO;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -67,5 +70,21 @@ public class AnaliseJobService {
     @Transactional(readOnly = true)
     public List<AnaliseJob> buscarPorStatus(StatusJob status) {
         return analiseJobRepository.findByStatus(status);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<HistoricoRelatorioDTO> listarHistorico(Long proprietarioId, Pageable pageable) {
+        return analiseJobRepository.findByArquivoProprietarioId(proprietarioId, pageable)
+                .map(job -> {
+                    var relatorio = job.getRelatorioAmeaca();
+                    return new HistoricoRelatorioDTO(
+                            job.getId(),
+                            job.getArquivo().getNomeOriginal(),
+                            job.getStatus().name(),
+                            job.getDataInicio(),
+                            job.getDataFim(),
+                            relatorio == null ? null : relatorio.getSeveridadeGeral(),
+                            relatorio == null ? null : relatorio.getResumo());
+                });
     }
 }

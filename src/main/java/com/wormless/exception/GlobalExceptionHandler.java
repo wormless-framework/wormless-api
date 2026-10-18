@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(
@@ -62,12 +62,12 @@ public class GlobalExceptionHandler {
         );
     }
 
-   @ExceptionHandler(Exception.class)
+    @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception exception,
             HttpServletRequest request) {
 
-        log.error("Erro interno no servidor capturado:", exception);
+        LOG.error("Erro interno no servidor capturado:", exception);
 
         ErrorResponse response = new ErrorResponse(
                 LocalDateTime.now(),

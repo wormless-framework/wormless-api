@@ -13,6 +13,9 @@ import com.wormless.services.AnaliseIAService;
 import com.wormless.services.RelatorioAmeacaService;
 import com.wormless.entities.PipelineCICD;
 import com.wormless.repository.PipelineCICDRepository;
+import com.wormless.security.User;
+import com.wormless.repository.AnaliseJobRepository;
+import org.eclipse.jgit.api.errors.GitAPIException;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,15 +46,16 @@ public class SandboxService {
             "Arquivo embutido: o PDF carrega outro arquivo dentro dele."
     );
 
-        private final ArquivoService arquivoService;
-        private final AnaliseJobService analiseJobService;
-        private final AnaliseIAService analiseIAService;
-        private final RelatorioAmeacaService relatorioAmeacaService;
-        private final PipelineCICDRepository pipelineCICDRepository;
+    private final ArquivoService arquivoService;
+    private final AnaliseJobService analiseJobService;
+    private final AnaliseIAService analiseIAService;
+    private final RelatorioAmeacaService relatorioAmeacaService;
+    private final PipelineCICDRepository pipelineCICDRepository;
+    private final AnaliseJobRepository analiseJobRepository;
 
     @Transactional
     public AnaliseJobResponseDTO iniciarAnalise(
-            ArquivoUploadDTO uploadDTO) {
+            ArquivoUploadDTO uploadDTO, User proprietario) {
 
         if (uploadDTO == null || uploadDTO.getArquivo() == null) {
             throw new BusinessException(
@@ -89,7 +93,29 @@ public class SandboxService {
             arquivo.setCaminhoTemporario(caminhoTemporario.toString());
             arquivo.setDataUpload(LocalDateTime.now());
 
-            Arquivo arquivoSalvo = arquivoService.salvar(arquivo);
+            arquivo.setNomeOriginal(
+                    arquivoUpload.getOriginalFilename()
+            );
+
+            arquivo.setTamanho(
+                    arquivoUpload.getSize()
+            );
+
+            arquivo.setTipoMime(
+                    arquivoUpload.getContentType()
+            );
+
+            arquivo.setCaminhoTemporario(
+                    caminhoTemporario.toString()
+            );
+
+            arquivo.setDataUpload(
+                    LocalDateTime.now()
+            );
+            arquivo.setProprietario(proprietario);
+
+            Arquivo arquivoSalvo =
+                    arquivoService.salvar(arquivo);
 
             AnaliseJob job = new AnaliseJob();
             job.setArquivo(arquivoSalvo);
@@ -156,8 +182,20 @@ public class SandboxService {
         return criarResponse(job);
     }
 
+    @Transactional(readOnly = true)
+    public AnaliseJobResponseDTO consultarResultadoDoUsuario(Long analiseId, Long proprietarioId) {
+        if (analiseId == null || proprietarioId == null
+                || !analiseJobRepository.existsByIdAndArquivoProprietarioId(analiseId, proprietarioId)) {
+            throw new ResourceNotFoundException("Análise não encontrada.");
+        }
+        return consultarResultado(analiseId);
+    }
+
     @Transactional
     public AnaliseJobResponseDTO iniciarAnaliseDeRepositorio(String repoUrl, String caminhoArquivo) {
+        if (repoUrl == null || repoUrl.isBlank() || caminhoArquivo == null || caminhoArquivo.isBlank()) {
+            throw new BusinessException("A URL do repositório e o caminho do arquivo são obrigatórios.");
+        }
         java.nio.file.Path diretorioTemp = null;
         try {
             diretorioTemp = java.nio.file.Files.createTempDirectory("wormless-deepscan-");
@@ -168,13 +206,19 @@ public class SandboxService {
                     .setDepth(1)
                     .call();
 
-            java.nio.file.Path arquivoFisico = diretorioTemp.resolve(caminhoArquivo);
-            if (!java.nio.file.Files.exists(arquivoFisico)) {
+            java.nio.file.Path raizRepositorio = diretorioTemp.toRealPath();
+            java.nio.file.Path arquivoFisico = diretorioTemp.resolve(caminhoArquivo).toRealPath();
+            if (!arquivoFisico.startsWith(raizRepositorio)
+                    || !java.nio.file.Files.isRegularFile(arquivoFisico)) {
                 throw new BusinessException("Ficheiro não encontrado no repositório clonado.");
             }
 
             Arquivo arquivo = new Arquivo();
-            arquivo.setNomeOriginal(arquivoFisico.getFileName().toString());
+            java.nio.file.Path nomeArquivo = arquivoFisico.getFileName();
+            if (nomeArquivo == null) {
+                throw new BusinessException("O caminho informado não é um arquivo válido.");
+            }
+            arquivo.setNomeOriginal(nomeArquivo.toString());
             arquivo.setTamanho(java.nio.file.Files.size(arquivoFisico));
             arquivo.setTipoMime("application/octet-stream");
             arquivo.setCaminhoTemporario(arquivoFisico.toString());
@@ -197,7 +241,10 @@ public class SandboxService {
 
             analiseJobService.iniciar(jobSalvo.getId());
 
-            String conteudo = new String(java.nio.file.Files.readAllBytes(arquivoFisico), java.nio.charset.StandardCharsets.ISO_8859_1);
+            // Lê o conteúdo bruto do arquivo com o encoding correto
+            String conteudo = new String(
+                    java.nio.file.Files.readAllBytes(arquivoFisico),
+                    java.nio.charset.StandardCharsets.ISO_8859_1);
             
             if (conteudo.length() > 6000) {
                 conteudo = conteudo.substring(0, 6000) + "\n...[TRUNCADO]";
@@ -206,20 +253,25 @@ public class SandboxService {
             jobSalvo.setResultadoBruto(conteudo);
             analiseJobService.salvar(jobSalvo);
 
-            RelatorioAmeaca relatorio = analiseIAService.analisar(jobSalvo.getResultadoBruto(), jobSalvo);
+            // Envia o conteúdo bruto do arquivo diretamente para a IA
+            RelatorioAmeaca relatorio = analiseIAService.analisar(
+                    jobSalvo.getResultadoBruto(), jobSalvo);
             relatorioAmeacaService.salvar(relatorio);
 
             analiseJobService.concluir(jobSalvo.getId());
 
             return consultarResultado(jobSalvo.getId());
 
-        } catch (Exception e) {
-            throw new BusinessException("Falha ao analisar ficheiro do repositório: " + e.getMessage());
+        } catch (IOException | GitAPIException e) {
+            throw new BusinessException(
+                    "Falha ao analisar ficheiro do repositório: " + e.getMessage());
         } finally {
             if (diretorioTemp != null) {
                 try {
                     org.springframework.util.FileSystemUtils.deleteRecursively(diretorioTemp);
-                } catch (Exception ignored) {}
+                } catch (IOException ignored) {
+                    // Ignora falha de limpeza do diretório temporário.
+                }
             }
         }
     }
