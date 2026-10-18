@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Getter
 @Setter
@@ -18,6 +19,7 @@ import lombok.Setter;
 @Table(name = "analistas_soc")
 public class AnalistaSOC extends Usuario {
 
+    @JsonIgnore
     @OneToMany(mappedBy = "analistaSOC")
     private List<FalsoPositivo> falsosPositivos = new ArrayList<>();
 }
