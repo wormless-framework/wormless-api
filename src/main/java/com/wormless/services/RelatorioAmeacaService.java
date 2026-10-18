@@ -73,6 +73,17 @@ public class RelatorioAmeacaService {
     }
 
     @Transactional(readOnly = true)
+    public RelatorioAmeaca buscarPorAnaliseIdDoUsuario(Long analiseId, Long proprietarioId) {
+        if (analiseId == null || proprietarioId == null) {
+            throw new ResourceNotFoundException("Relatório não encontrado.");
+        }
+
+        return relatorioRepository
+                .findByAnaliseJobIdAndAnaliseJobArquivoProprietarioId(analiseId, proprietarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Relatório não encontrado."));
+    }
+
+    @Transactional(readOnly = true)
     public String gerarResumo(Long id) {
 
         return buscarPorId(id).gerarResumo();
