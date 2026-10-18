@@ -41,20 +41,17 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/sandbox/analises").permitAll()
                         .requestMatchers(HttpMethod.POST, "/sandbox/repositorio/triagem").permitAll()
-
+                        .requestMatchers(HttpMethod.POST, "/dependencias/scan").permitAll()
                         .requestMatchers("/sandbox/**")
                         .hasAnyRole(Role.CLIENT.name(), Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
-
                         .requestMatchers("/soc/**")
                         .hasAnyRole(Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
-
                         .requestMatchers("/admin/**").hasRole(Role.SOC_ADMIN.name())
                         .requestMatchers("/me/**")
                         .hasAnyRole(Role.CLIENT.name(), Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
                         .requestMatchers("/relatorios/**").hasAnyRole(Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
                         .requestMatchers("/analises/**", "/arquivos/**")
                         .hasAnyRole(Role.SOC_ANALYST.name(), Role.SOC_ADMIN.name())
-
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -1,0 +1,116 @@
+﻿name: Wormless Maven Dependency Scan
+description: Analisa o grafo Maven do checkout com OSV-Scanner e envia o SBOM à API Wormless.
+
+inputs:
+  api-url:
+    description: URL base da API Wormless.
+    required: true
+  oidc-audience:
+    description: Audience OIDC configurada no servidor Wormless.
+    required: false
+    default: api://wormless
+
+runs:
+  using: composite
+  steps:
+    - name: Analisar dependências Maven e gerar SBOM
+      id: osv_scan
+      uses: google/osv-scanner-action/osv-scanner-action@7f58dd6750d78fc29a900ba64b1a0f946f62fba4
+      continue-on-error: true
+      with:
+        scan-args: |-
+          --recursive
+          --format cyclonedx-1.5
+          --all-packages
+          --output-file=wormless-scan.cdx.json
+          ./
+
+    - name: Enviar SBOM à API Wormless e aplicar política
+      shell: bash
+      env:
+        WORMLESS_API_URL: ${{ inputs.api-url }}
+        WORMLESS_OIDC_AUDIENCE: ${{ inputs.oidc-audience }}
+        WORMLESS_SCANNER_OUTCOME: ${{ steps.osv_scan.outcome }}
+      run: |
+        set -euo pipefail
+        report_file="$GITHUB_WORKSPACE/wormless-scan.cdx.json"
+        trap 'rm -f "$report_file"' EXIT
+
+        if [[ ! -s "$report_file" ]] || ! jq -e '.bomFormat == "CycloneDX" and (.components | type == "array")' "$report_file" >/dev/null; then
+          echo '::error::O OSV-Scanner não produziu um SBOM CycloneDX válido.'
+          exit 1
+        fi
+        if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
+          echo '::error::Habilite permissions.id-token: write no job do GitHub Actions.'
+          exit 1
+        fi
+
+        oidc_response="$(curl --silent --show-error --fail --get \
+          --data-urlencode "audience=$WORMLESS_OIDC_AUDIENCE" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL" \
+          --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN")"
+        oidc_token="$(jq -er '.value | select(type == "string" and length > 0)' <<< "$oidc_response")"
+
+        payload_file="$(mktemp)"
+        trap 'rm -f "$report_file" "$payload_file"' EXIT
+        jq -n \
+          --arg repository "$GITHUB_REPOSITORY" \
+          --arg ref "$GITHUB_REF" \
+          --arg commitSha "$GITHUB_SHA" \
+          --arg outcome "$WORMLESS_SCANNER_OUTCOME" \
+          --slurpfile report "$report_file" \
+          '{repository: $repository, ref: $ref, commitSha: $commitSha,
+            scanReport: $report[0],
+            scannerWarnings: (if $outcome == "failure" and (($report[0].vulnerabilities // []) | length) == 0 then ["O scanner terminou sem vulnerabilidades e com código de erro; a análise requer revisão."] else [] end)}' \
+          > "$payload_file"
+        response_file="$(mktemp)"
+        trap 'rm -f "$response_file" "$payload_file" "$report_file"' EXIT
+
+        status_code="$(curl --silent --show-error \
+          --connect-timeout 10 --max-time 60 \
+          --output "$response_file" \
+          --write-out '%{http_code}' \
+          --request POST \
+          "${WORMLESS_API_URL%/}/dependencias/scan" \
+          --header "Authorization: Bearer $oidc_token" \
+          --header 'Content-Type: application/json' \
+          --data-binary "@$payload_file")"
+        unset oidc_token oidc_response
+
+        if [[ ! "$status_code" =~ ^2 ]]; then
+          echo "::error::A API Wormless retornou HTTP $status_code."
+          cat "$response_file"
+          exit 1
+        fi
+
+        if ! jq -e 'type == "object" and has("analysisComplete")' "$response_file" >/dev/null; then
+          echo '::error::A API Wormless retornou uma resposta inválida.'
+          cat "$response_file"
+          exit 1
+        fi
+
+        stop_token="wormless-$RANDOM-$RANDOM"
+        echo "::stop-commands::$stop_token"
+        {
+          echo '### Varredura de dependências Wormless'
+          jq -r '"- Repositório: \(.repository)\n- Referência: \(.ref)\n- Dependências analisadas: \(.dependenciesScanned)\n- Dependências vulneráveis: \(.vulnerableDependencies)"' "$response_file"
+          echo ''
+          echo '#### Achados'
+          jq -r '.findings[]? | select((.vulnerabilities | length) > 0) as $package | $package.vulnerabilities[] | "- `\($package.packageName)@\($package.version)` (\($package.manifest)): `\(.identifier)` [\((.aliases // []) | join(", "))] — \(.summary)"' "$response_file"
+          echo ''
+          echo '#### Avisos'
+          jq -r '.warnings[]? | "- " + .' "$response_file"
+        } | tee -a "$GITHUB_STEP_SUMMARY"
+        echo "::$stop_token::"
+
+        if [[ "$(jq -r '.analysisComplete' "$response_file")" != "true" ]]; then
+          echo '::error::A análise ficou incompleta. A build será bloqueada para evitar ignorar dependências.'
+          exit 1
+        fi
+
+        if [[ "$(jq -r '.vulnerabilitiesFound' "$response_file")" == "true" ]]; then
+          echo '::error::O Wormless encontrou vulnerabilidades nas dependências.'
+          exit 1
+        fi
+
+        echo 'A varredura Wormless não encontrou vulnerabilidades conhecidas.'

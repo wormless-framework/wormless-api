@@ -35,6 +35,7 @@ services:
       SANDBOX_URL: http://host.docker.internal:8081
       FRONTEND_ORIGIN: http://localhost:5173
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      WORMLESS_GITHUB_OIDC_ALLOWED_REPOSITORIES: "/thiagoia/muito-suspeito"
     ports:
       - "8080:8080"
     extra_hosts:
