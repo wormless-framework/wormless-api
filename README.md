@@ -67,3 +67,32 @@ Para executar as verificações da esteira GitHub Actions localmente:
 No PowerShell, substitua `./mvnw` por `./mvnw.cmd`.
 O relatório XML do SpotBugs é gerado em `target/spotbugsXml.xml`.
 
+
+## Usar como GitHub Action em outro repositório
+
+O workflow consumidor deve fazer checkout do código e permitir que o job solicite um token OIDC:
+
+```yaml
+name: Wormless
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: SEU_USUARIO/wormless-api@v1
+        with:
+          api-url: ${{ vars.WORMLESS_API_URL }}
+          oidc-audience: api://wormless
+```
+
+Configure `WORMLESS_API_URL` como variável no repositório consumidor. O checkout usa o `GITHUB_TOKEN` de curta duração do próprio job e o token não é enviado à API Wormless. O servidor valida o token OIDC e só aceita repositórios listados em `WORMLESS_GITHUB_OIDC_ALLOWED_REPOSITORIES` (separe vários nomes `owner/repo` por vírgula). O audience configurado em `oidc-audience` deve corresponder a `WORMLESS_GITHUB_OIDC_AUDIENCE` no servidor. O endpoint aceita eventos `push`, `pull_request` e `workflow_dispatch`.
+
+**Análise:** a Action executa uma versão fixada do OSV-Scanner no runner e envia à API apenas o SBOM CycloneDX e os metadados do commit. O scanner resolve o grafo Maven, incluindo dependências transitivas; a API não clona o repositório nem consulta o OSV novamente. A validação OIDC exige que o repositório conste em `WORMLESS_GITHUB_OIDC_ALLOWED_REPOSITORIES`. SBOM inválido, erro de scanner ou resultado com vulnerabilidades bloqueia a build.
