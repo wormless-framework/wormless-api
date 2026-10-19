@@ -32,11 +32,14 @@ services:
       DB_USER: wormless
       DB_PASSWORD: wormless
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
-      SANDBOX_URL: http://localhost:8081
+      SANDBOX_URL: http://host.docker.internal:8081
       FRONTEND_ORIGIN: http://localhost:5173
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      WORMLESS_GITHUB_OIDC_ALLOWED_REPOSITORIES: "/thiagoia/muito-suspeito"
     ports:
       - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   wormless-mysql-data:

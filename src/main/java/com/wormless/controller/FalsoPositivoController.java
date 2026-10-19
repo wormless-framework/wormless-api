@@ -1,7 +1,9 @@
 package com.wormless.controller;
 
+import com.wormless.dto.request.MarcarFalsoPositivoDTO;
 import com.wormless.entities.FalsoPositivo;
 import com.wormless.services.FalsoPositivoService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 import java.util.List;
 
@@ -21,6 +24,15 @@ public class FalsoPositivoController {
 
     private final FalsoPositivoService falsoPositivoService;
 
+    @PostMapping("/marcar")
+    public ResponseEntity<FalsoPositivo> marcarFalsoPositivo(
+            @Valid @RequestBody MarcarFalsoPositivoDTO dto) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(falsoPositivoService.marcarComoFalsoPositivo(dto));
+    }
+
     @PostMapping
     public ResponseEntity<FalsoPositivo> salvar(
             @RequestBody FalsoPositivo falsoPositivo) {
@@ -28,6 +40,14 @@ public class FalsoPositivoController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(falsoPositivoService.salvar(falsoPositivo));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> removerFalsoPositivo(@PathVariable Long id) {
+        
+        falsoPositivoService.excluir(id);
+        
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")

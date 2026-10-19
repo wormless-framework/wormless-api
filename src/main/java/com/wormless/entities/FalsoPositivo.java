@@ -42,8 +42,8 @@ public class FalsoPositivo {
     @JoinColumn(name = "indicador_ameaca_id", nullable = false, unique = true)
     private IndicadorAmeaca indicadorAmeaca;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "regra_deteccao_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "regra_deteccao_id", nullable = false)
     private RegraDeteccao regraDeteccao;
 
     public void aplicar() {
@@ -53,6 +53,26 @@ public class FalsoPositivo {
 
         if (regraDeteccao != null) {
             regraDeteccao.ignorarEmMetricasFuturas();
+        }
+    }
+
+    public String getNomeArquivo() {
+        try {
+            return this.indicadorAmeaca.getRelatorioAmeaca().getAnaliseJob().getArquivo().getNomeOriginal();
+        } catch (Exception e) {
+            return "Desconhecido";
+        }
+    }
+
+    public String getOrigemRepositorio() {
+        try {
+            PipelineCICD pipeline = this.indicadorAmeaca
+                .getRelatorioAmeaca()
+                .getAnaliseJob()
+                .getPipelineCICD();
+            return pipeline != null ? pipeline.getRepositorio() : "Upload Manual";
+        } catch (Exception e) {
+            return "N/A";
         }
     }
 }

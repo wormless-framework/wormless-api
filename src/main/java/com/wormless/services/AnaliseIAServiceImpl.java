@@ -2,7 +2,12 @@ package com.wormless.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wormless.entities.*;
+import com.wormless.entities.Ameaca;
+import com.wormless.entities.AnaliseJob;
+import com.wormless.entities.IndicadorAmeaca;
+import com.wormless.entities.Remediacao;
+import com.wormless.entities.RelatorioAmeaca;
+import com.wormless.entities.Vulnerabilidade;
 import com.wormless.entities.enums.Severidade;
 import com.wormless.entities.enums.StatusIndicador;
 import com.wormless.integrations.gemini.GeminiRequest;
@@ -26,7 +31,7 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
     private final VulnerabilidadeService vulnerabilidadeService;
     private final GeminiService geminiService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -37,26 +42,33 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
 
         if (resultadoBruto == null || resultadoBruto.isBlank()) {
             relatorio.setSeveridadeGeral(Severidade.BAIXA);
-            relatorio.setResumo("A análise estática não detetou anomalias. Nenhuma verificação de IA foi necessária.");
+            relatorio.setResumo("A análise estática não detetou anomalias. " +
+                    "Nenhuma verificação de IA foi necessária.");
             return relatorio;
         }
 
-        String prompt = """
-            És um analista sênior de SOC e especialista forense. Analisa o seguinte log detetado numa Sandbox estática de um ficheiro PDF:
+        String promptTemplate = String.join(
+                System.lineSeparator(),
+                List.of(
+                    "És um analista sênior de SOC e especialista forense. Analisa o seguinte log",
+                    "detetado numa Sandbox estática de um ficheiro PDF:",
+                    "",
+                    "%s",
+                    "",
+                    "Com base nisto, age como uma API e devolve APENAS um JSON válido. Não utilizes formatação ",
+                    "Markdown (como ```json).",
+                    "O JSON deve ter exatamente estas chaves:",
+                    "\"severidadeGeral\": (deve ser BAIXA, MEDIA, ALTA ou CRITICA),",
+                    "\"resumo\": \"Um resumo executivo da ameaça e do seu impacto potencial\",",
+                    "\"nomeAmeaca\": \"Nome técnico da ameaça detetada\",",
+                    "\"tipoAmeaca\": \"Família ou tipo (ex: Malware, Phishing, Dropper)\",",
+                    "\"comoAge\": \"Explicação técnica detalhada de como o atacante exploraria isto\",",
+                    "\"cve\": \"Código CVE provável ou 'N/A' se for falha arquitetural\",",
+                    "\"descricaoVuln\": \"Explicação da vulnerabilidade\",",
+                    "\"remediacao\": \"Passos técnicos detalhados e enumerados para resolver a ameaça\""
+                ));
 
-            %s
-
-            Com base nisto, age como uma API e devolve APENAS um JSON válido. Não utilizes formatação Markdown (como ```json).
-            O JSON deve ter exatamente estas chaves:
-            "severidadeGeral": (deve ser BAIXA, MEDIA, ALTA ou CRITICA),
-            "resumo": "Um resumo executivo da ameaça e do seu impacto potencial",
-            "nomeAmeaca": "Nome técnico da ameaça detetada",
-            "tipoAmeaca": "Família ou tipo (ex: Malware, Phishing, Dropper)",
-            "comoAge": "Explicação técnica detalhada de como o atacante exploraria isto",
-            "cve": "Código CVE provável ou 'N/A' se for falha arquitetural",
-            "descricaoVuln": "Explicação da vulnerabilidade",
-            "remediacao": "Passos técnicos detalhados e enumerados para resolver a ameaça"
-            """.formatted(resultadoBruto);
+        String prompt = promptTemplate.formatted(resultadoBruto);
 
         JsonNode iaNode;
 
@@ -75,11 +87,12 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
         } catch (Exception e) {
             log.error("Erro na comunicação/leitura da IA: {}", e.getMessage(), e);
             relatorio.setSeveridadeGeral(Severidade.ALTA);
-            relatorio.setResumo("Ameaça detetada na Sandbox, mas falha ao processar análise detalhada via IA. Reveja o ficheiro manualmente.");
+            relatorio.setResumo(
+                    "Ameaça detetada na Sandbox, mas falha ao processar análise detalhada via IA. "
+                            + "Reveja o ficheiro manualmente.");
             return relatorio;
         }
 
-        // Gravar na base de dados fora do catch
         relatorio.setSeveridadeGeral(parseSeveridade(iaNode.path("severidadeGeral").asText()));
         relatorio.setResumo(iaNode.path("resumo").asText());
 
@@ -106,7 +119,8 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
             IndicadorAmeaca indicador = new IndicadorAmeaca();
             indicador.setTrechoArquivo(linhas[i]);
             indicador.setLinhaOcorrencia(i + 1);
-            indicador.setDescricaoComportamento("Identificado pela IA como vetor ofensivo associado a: " + ameaca.getNome());
+            indicador.setDescricaoComportamento(
+                    "Identificado pela IA como vetor ofensivo associado a: " + ameaca.getNome());
             indicador.setStatus(StatusIndicador.ATIVO);
             indicador.setAmeaca(ameacaSalva);
             indicador.setRelatorioAmeaca(relatorio);
