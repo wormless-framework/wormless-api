@@ -12,8 +12,11 @@ import com.wormless.entities.Ameaca;
 import com.wormless.entities.AnaliseJob;
 import com.wormless.entities.Arquivo;
 import com.wormless.entities.enums.StatusJob;
+import com.wormless.exception.ArquivoMuitoGrandeException;
 import com.wormless.exception.BusinessException;
+import com.wormless.exception.ProcessamentoArquivoException;
 import com.wormless.exception.ResourceNotFoundException;
+import com.wormless.exception.TipoArquivoNaoSuportadoException;
 import com.wormless.entities.RelatorioAmeaca;
 import com.wormless.entities.PipelineCICD;
 import com.wormless.repository.PipelineCICDRepository;
@@ -24,8 +27,10 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -48,25 +53,7 @@ public class SandboxService {
     public AnaliseJobResponseDTO iniciarAnalise(
             ArquivoUploadDTO uploadDTO, User proprietario) {
 
-        if (uploadDTO == null || uploadDTO.getArquivo() == null) {
-            throw new BusinessException(
-                    "O arquivo para análise deve ser informado."
-            );
-        }
-
-        if (uploadDTO.getArquivo().isEmpty()) {
-            throw new BusinessException(
-                    "O arquivo enviado está vazio."
-            );
-        }
-
-        if (TipoArquivo.porNome(
-                uploadDTO.getArquivo().getOriginalFilename()).isEmpty()) {
-            throw new BusinessException(
-                    "Tipo de arquivo não suportado. Envie um arquivo "
-                            + TipoArquivo.extensoesAceitas() + "."
-            );
-        }
+        validarUpload(uploadDTO == null ? null : uploadDTO.getArquivo());
 
         try {
             var arquivoUpload = uploadDTO.getArquivo();
@@ -146,8 +133,48 @@ public class SandboxService {
             return consultarResultado(jobSalvo.getId());
 
         } catch (IOException e) {
+            throw new ProcessamentoArquivoException(
+                    "Não foi possível preparar o arquivo para análise.", e
+            );
+        }
+    }
+
+    /**
+     * Existência, tipo e tamanho do arquivo enviado, nessa ordem: cada falha
+     * tem uma exceção própria, mapeada para o status HTTP correspondente.
+     */
+    void validarUpload(MultipartFile arquivo) {
+
+        if (arquivo == null) {
             throw new BusinessException(
-                    "Não foi possível preparar o arquivo para análise."
+                    "O arquivo para análise deve ser informado."
+            );
+        }
+
+        String nome = arquivo.getOriginalFilename();
+
+        if (nome == null || nome.isBlank()) {
+            throw new BusinessException(
+                    "O arquivo enviado não possui nome."
+            );
+        }
+
+        if (arquivo.isEmpty()) {
+            throw new BusinessException(
+                    "O arquivo enviado está vazio."
+            );
+        }
+
+        if (TipoArquivo.porNome(nome).isEmpty()) {
+            throw new TipoArquivoNaoSuportadoException(
+                    "Tipo de arquivo não suportado. Envie um arquivo "
+                            + TipoArquivo.extensoesAceitas() + "."
+            );
+        }
+
+        if (arquivo.getSize() > Arquivo.TAMANHO_MAXIMO_BYTES) {
+            throw new ArquivoMuitoGrandeException(
+                    "O arquivo excede o tamanho máximo de 100 MB."
             );
         }
     }
@@ -203,7 +230,7 @@ public class SandboxService {
             java.nio.file.Path arquivoFisico = diretorioTemp.resolve(caminhoArquivo).toRealPath();
             if (!arquivoFisico.startsWith(raizRepositorio)
                     || !java.nio.file.Files.isRegularFile(arquivoFisico)) {
-                throw new BusinessException("Ficheiro não encontrado no repositório clonado.");
+                throw new ResourceNotFoundException("Ficheiro não encontrado no repositório clonado.");
             }
 
             Arquivo arquivo = new Arquivo();
@@ -255,9 +282,14 @@ public class SandboxService {
 
             return consultarResultado(jobSalvo.getId());
 
-        } catch (IOException | GitAPIException e) {
+        } catch (NoSuchFileException e) {
+            throw new ResourceNotFoundException("Ficheiro não encontrado no repositório clonado.");
+        } catch (GitAPIException e) {
             throw new BusinessException(
-                    "Falha ao analisar ficheiro do repositório: " + e.getMessage());
+                    "Não foi possível clonar o repositório: " + e.getMessage());
+        } catch (IOException e) {
+            throw new ProcessamentoArquivoException(
+                    "Falha ao ler o ficheiro do repositório.", e);
         } finally {
             if (diretorioTemp != null) {
                 try {
