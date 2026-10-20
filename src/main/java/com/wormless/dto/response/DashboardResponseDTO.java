@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.Map;
 
 @Getter
@@ -15,12 +16,10 @@ import java.util.Map;
 public class DashboardResponseDTO {
 
     private long totalAnalises;
-
     private long totalAmeacas;
-
     private long totalVulnerabilidades;
-
     private long totalFalsosPositivos;
-
     private Map<Severidade, Long> analisesPorSeveridade;
+    
+    private List<HistoricoRelatorioDTO> ultimasAnalises;
 }
