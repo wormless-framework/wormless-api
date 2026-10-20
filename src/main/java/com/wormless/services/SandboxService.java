@@ -1,13 +1,19 @@
 package com.wormless.services;
 
+import com.wormless.analise.ContextoAnalise;
+import com.wormless.analise.MotorAnaliseSeguranca;
+import com.wormless.analise.ResultadoAnalise;
+import com.wormless.analise.TipoArquivo;
 import com.wormless.dto.request.ArquivoUploadDTO;
+import com.wormless.dto.response.AchadoDTO;
 import com.wormless.dto.response.AnaliseJobResponseDTO;
+import com.wormless.dto.response.RelatorioIADTO;
+import com.wormless.entities.Ameaca;
 import com.wormless.entities.AnaliseJob;
 import com.wormless.entities.Arquivo;
 import com.wormless.entities.enums.StatusJob;
 import com.wormless.exception.BusinessException;
 import com.wormless.exception.ResourceNotFoundException;
-import com.wormless.entities.enums.Severidade;
 import com.wormless.entities.RelatorioAmeaca;
 import com.wormless.entities.PipelineCICD;
 import com.wormless.repository.PipelineCICDRepository;
@@ -20,32 +26,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class SandboxService {
 
-    // Marcador procurado no PDF -> título e descrição do teste
-    private static final Map<String, String> TESTES_PDF = Map.of(
-            "/JavaScript",
-            "JavaScript embutido: o PDF contém código que pode ser executado ao abrir.",
-            "/OpenAction",
-            "Ação automática: o PDF executa uma ação assim que é aberto.",
-            "/Launch",
-            "Execução de programa: o PDF tenta abrir um programa externo.",
-            "/EmbeddedFile",
-            "Arquivo embutido: o PDF carrega outro arquivo dentro dele."
-    );
-
     private final ArquivoService arquivoService;
     private final AnaliseJobService analiseJobService;
+    private final MotorAnaliseSeguranca motorAnaliseSeguranca;
     private final AnaliseIAService analiseIAService;
     private final RelatorioAmeacaService relatorioAmeacaService;
     private final PipelineCICDRepository pipelineCICDRepository;
@@ -67,10 +60,11 @@ public class SandboxService {
             );
         }
 
-        if (!"application/pdf".equals(
-                uploadDTO.getArquivo().getContentType())) {
+        if (TipoArquivo.porNome(
+                uploadDTO.getArquivo().getOriginalFilename()).isEmpty()) {
             throw new BusinessException(
-                    "Apenas arquivos PDF são aceitos."
+                    "Tipo de arquivo não suportado. Envie um arquivo "
+                            + TipoArquivo.extensoesAceitas() + "."
             );
         }
 
@@ -123,28 +117,29 @@ public class SandboxService {
             // Coloca a análise em processamento
             analiseJobService.iniciar(jobSalvo.getId());
 
-            // Executa os testes de segurança no conteúdo do PDF
-            String conteudo = new String(
-                    Files.readAllBytes(caminhoTemporario),
-                    StandardCharsets.ISO_8859_1
+            // Executa os testes de segurança no conteúdo do arquivo
+            ContextoAnalise contexto = ContextoAnalise.de(
+                    arquivoUpload.getOriginalFilename(),
+                    arquivoUpload.getContentType(),
+                    Files.readAllBytes(caminhoTemporario)
             );
 
-            List<String> testesDetectados = new ArrayList<>();
+            ResultadoAnalise resultado =
+                    motorAnaliseSeguranca.analisar(contexto);
 
-            TESTES_PDF.forEach((marcador, descricao) -> {
-                if (conteudo.contains(marcador)) {
-                    testesDetectados.add(descricao);
-                }
-            });
+            // Guarda um achado por linha
+            jobSalvo.setResultadoBruto(
+                    resultado.paraResultadoBruto()
+            );
 
-            jobSalvo.setResultadoBruto(String.join("\n", testesDetectados));
             analiseJobService.salvar(jobSalvo);
 
+            // A IA gera o relatório forense a partir dos achados, em texto legível
             RelatorioAmeaca relatorio = analiseIAService.analisar(
-                jobSalvo.getResultadoBruto(), 
-                jobSalvo
+                    textoParaIA(resultado),
+                    jobSalvo
             );
-                
+
             relatorioAmeacaService.salvar(relatorio);
             analiseJobService.concluir(jobSalvo.getId());
 
@@ -279,16 +274,19 @@ public class SandboxService {
 
         String resumo;
 
-        List<String> testes =
-                job.getResultadoBruto() == null || job.getResultadoBruto().isBlank()
-                        ? List.of()
-                        : List.of(job.getResultadoBruto().split("\n"));
+        ResultadoAnalise resultado =
+                ResultadoAnalise.deResultadoBruto(job.getResultadoBruto());
 
-        boolean ameacaDetectada = !testes.isEmpty();
-
-        // Risco pela quantidade de testes detectados: 0 = BAIXA ... 3 ou mais = CRITICA
-        int nivel = Math.min(testes.size(), Severidade.values().length - 1);
-        Severidade severidade = Severidade.values()[nivel];
+        List<AchadoDTO> achados = resultado.achados().stream()
+                .map(achado -> new AchadoDTO(
+                        achado.idTeste(),
+                        achado.categoria().name(),
+                        achado.severidade().name(),
+                        achado.tecnica() == null ? null : achado.tecnica().getId(),
+                        achado.descricao(),
+                        achado.evidencia()
+                ))
+                .toList();
 
         switch (job.getStatus()) {
 
@@ -319,10 +317,65 @@ public class SandboxService {
         return new AnaliseJobResponseDTO(
                 job.getId(),
                 job.getStatus().name(),
-                ameacaDetectada,
-                severidade,
+                resultado.ameacaDetectada(),
+                resultado.severidadeGeral(),
                 resumo,
-                testes
+                resultado.descricoes(),
+                achados,
+                criarRelatorioIA(job.getId())
         );
+    }
+
+    /**
+     * Um achado por linha, com categoria e severidade, para o prompt da IA
+     * (o TSV do resultadoBruto é pensado para máquina, não para leitura).
+     */
+    private String textoParaIA(ResultadoAnalise resultado) {
+        return resultado.achados().stream()
+                .map(achado -> "[" + achado.categoria() + "] "
+                        + achado.severidade() + " - " + achado.paraTexto())
+                .collect(Collectors.joining("\n"));
+    }
+
+    /** Relatório da IA gravado para a análise, ou {@code null} se não houver. */
+    private RelatorioIADTO criarRelatorioIA(Long analiseId) {
+
+        List<RelatorioAmeaca> relatorios =
+                relatorioAmeacaService.listarPorAnaliseId(analiseId);
+
+        if (relatorios.isEmpty()) {
+            return null;
+        }
+
+        RelatorioAmeaca relatorio = relatorios.get(0);
+
+        Ameaca ameaca = relatorio.getIndicadores().isEmpty()
+                ? null
+                : relatorio.getIndicadores().get(0).getAmeaca();
+
+        if (ameaca == null) {
+            return new RelatorioIADTO(
+                    nome(relatorio.getSeveridadeGeral()), relatorio.getResumo(),
+                    null, null, null, null, null, null);
+        }
+
+        var vulnerabilidade = ameaca.getVulnerabilidades().isEmpty()
+                ? null
+                : ameaca.getVulnerabilidades().get(0);
+
+        return new RelatorioIADTO(
+                nome(relatorio.getSeveridadeGeral()),
+                relatorio.getResumo(),
+                ameaca.getNome(),
+                ameaca.getTipo(),
+                ameaca.getComoAge(),
+                vulnerabilidade == null ? null : vulnerabilidade.getCve(),
+                vulnerabilidade == null ? null : vulnerabilidade.getDescricao(),
+                ameaca.getRemediacao() == null ? null : ameaca.getRemediacao().getOrientacao()
+        );
+    }
+
+    private static String nome(Enum<?> valor) {
+        return valor == null ? null : valor.name();
     }
 }

@@ -57,6 +57,12 @@ public class RelatorioAmeacaService {
                 );
     }
 
+    /** Relatórios da análise; lista vazia quando a IA ainda não gerou nenhum. */
+    @Transactional(readOnly = true)
+    public List<RelatorioAmeaca> listarPorAnaliseId(Long analiseId) {
+        return relatorioRepository.findByAnaliseJobId(analiseId);
+    }
+
     @Transactional(readOnly = true)
     public RelatorioAmeaca buscarPorAnaliseId(Long analiseId) {
         if (analiseId == null) {
