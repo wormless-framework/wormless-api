@@ -87,6 +87,15 @@ public class RepositorioScannerService {
         if (nomeMinusculo.endsWith(".pdf")) {
             return "Ficheiro PDF encontrado";
         }
+        if (nomeMinusculo.endsWith(".doc")) {
+            return "Documento Word (pode conter macros)";
+        }
+        if (nomeMinusculo.endsWith(".exe")) {
+            return "Executável Windows no repositório";
+        }
+        if (nomeMinusculo.endsWith(".zip")) {
+            return "Arquivo compactado no repositório";
+        }
         if (nomeMinusculo.endsWith(".sh")) {
             return "Potencial injeção de comandos";
         }

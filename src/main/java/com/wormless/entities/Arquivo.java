@@ -26,6 +26,9 @@ import com.wormless.security.User;
 @Table(name = "arquivos")
 public class Arquivo {
 
+    /** Tamanho máximo aceito para análise: 100 MB. */
+    public static final long TAMANHO_MAXIMO_BYTES = 100L * 1024 * 1024;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -58,6 +61,6 @@ public class Arquivo {
     }
 
     public boolean validarTamanho() {
-        return tamanho != null && tamanho > 0 && tamanho <= 100L * 1024 * 1024; // 100 MB
+        return tamanho != null && tamanho > 0 && tamanho <= TAMANHO_MAXIMO_BYTES;
     }
 }

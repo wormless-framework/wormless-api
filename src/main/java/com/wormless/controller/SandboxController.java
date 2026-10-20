@@ -34,7 +34,7 @@ public class SandboxController {
 
     @PostMapping("/analises")
     public ResponseEntity<AnaliseJobResponseDTO> iniciarAnalise(
-            @Valid @ModelAttribute ArquivoUploadDTO uploadDTO,
+            @ModelAttribute ArquivoUploadDTO uploadDTO,
             Principal principal) {
 
         User proprietario = principal == null ? null : userRepository.findByEmail(principal.getName())

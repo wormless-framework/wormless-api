@@ -25,4 +25,8 @@ public class AnaliseJobResponseDTO {
     private String resumo;
 
     private List<String> testes;
+
+    private List<AchadoDTO> achados;
+
+    private RelatorioIADTO relatorioIA;
 }

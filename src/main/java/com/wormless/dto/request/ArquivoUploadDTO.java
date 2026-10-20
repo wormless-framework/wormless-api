@@ -1,6 +1,5 @@
 package com.wormless.dto.request;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,6 +12,6 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 public class ArquivoUploadDTO {
 
-    @NotNull(message = "O arquivo deve ser informado.")
+    /** Validado no SandboxService (existência, tipo e tamanho). */
     private MultipartFile arquivo;
 }

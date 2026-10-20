@@ -4,6 +4,7 @@ import com.wormless.entities.enums.StatusIndicador;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -31,10 +32,12 @@ public class IndicadorAmeaca {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(columnDefinition = "TEXT")
     private String trechoArquivo;
 
     private int linhaOcorrencia;
 
+    @Column(columnDefinition = "TEXT")
     private String descricaoComportamento;
 
     @Enumerated(EnumType.STRING)

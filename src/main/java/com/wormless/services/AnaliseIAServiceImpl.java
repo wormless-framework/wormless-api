@@ -51,7 +51,7 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
                 System.lineSeparator(),
                 List.of(
                     "És um analista sênior de SOC e especialista forense. Analisa o seguinte log",
-                    "detetado numa Sandbox estática de um ficheiro PDF:",
+                    "detetado numa Sandbox estática de um ficheiro (PDF, DOC, EXE ou ZIP):",
                     "",
                     "%s",
                     "",
@@ -107,12 +107,12 @@ public class AnaliseIAServiceImpl implements AnaliseIAService {
         vuln.setCve(iaNode.path("cve").asText());
         vuln.setDescricao(iaNode.path("descricaoVuln").asText());
         vuln.setAmeaca(ameacaSalva);
-        vulnerabilidadeService.salvar(vuln);
+        ameacaSalva.getVulnerabilidades().add(vulnerabilidadeService.salvar(vuln));
 
         Remediacao remediacao = new Remediacao();
         remediacao.setOrientacao(iaNode.path("remediacao").asText());
         remediacao.setAmeaca(ameacaSalva);
-        remediacaoService.salvar(remediacao);
+        ameacaSalva.setRemediacao(remediacaoService.salvar(remediacao));
 
         String[] linhas = resultadoBruto.split("\n");
         for (int i = 0; i < linhas.length; i++) {
