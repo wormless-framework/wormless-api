@@ -53,11 +53,10 @@ public class SandboxService {
     public AnaliseJobResponseDTO iniciarAnalise(
             ArquivoUploadDTO uploadDTO, User proprietario) {
 
-        validarUpload(uploadDTO == null ? null : uploadDTO.getArquivo());
+        MultipartFile arquivoUpload =
+                validarUpload(uploadDTO == null ? null : uploadDTO.getArquivo());
 
         try {
-            var arquivoUpload = uploadDTO.getArquivo();
-
             Path caminhoTemporario = Files.createTempFile(
                     "wormless-",
                     "-" + arquivoUpload.getOriginalFilename()
@@ -142,8 +141,10 @@ public class SandboxService {
     /**
      * Existência, tipo e tamanho do arquivo enviado, nessa ordem: cada falha
      * tem uma exceção própria, mapeada para o status HTTP correspondente.
+     *
+     * @return o próprio arquivo, já validado e não nulo
      */
-    void validarUpload(MultipartFile arquivo) {
+    MultipartFile validarUpload(MultipartFile arquivo) {
 
         if (arquivo == null) {
             throw new BusinessException(
@@ -177,6 +178,8 @@ public class SandboxService {
                     "O arquivo excede o tamanho máximo de 100 MB."
             );
         }
+
+        return arquivo;
     }
 
     @Transactional(readOnly = true)

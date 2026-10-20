@@ -34,3 +34,6 @@ build/
 ### VS Code ###
 .vscode/
 .env
+
+### Documentação local ###
+docs/testes-seguranca.md
