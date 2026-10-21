@@ -70,26 +70,6 @@ public class SandboxService {
             arquivo.setTipoMime(arquivoUpload.getContentType());
             arquivo.setCaminhoTemporario(caminhoTemporario.toString());
             arquivo.setDataUpload(LocalDateTime.now());
-
-            arquivo.setNomeOriginal(
-                    arquivoUpload.getOriginalFilename()
-            );
-
-            arquivo.setTamanho(
-                    arquivoUpload.getSize()
-            );
-
-            arquivo.setTipoMime(
-                    arquivoUpload.getContentType()
-            );
-
-            arquivo.setCaminhoTemporario(
-                    caminhoTemporario.toString()
-            );
-
-            arquivo.setDataUpload(
-                    LocalDateTime.now()
-            );
             arquivo.setProprietario(proprietario);
 
             Arquivo arquivoSalvo =
