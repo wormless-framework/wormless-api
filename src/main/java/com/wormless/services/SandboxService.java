@@ -248,7 +248,6 @@ public class SandboxService {
             arquivo.setDataUpload(java.time.LocalDateTime.now());
             Arquivo arquivoSalvo = arquivoService.salvar(arquivo);
 
-            // ---> LÓGICA DO PIPELINE AQUI <---
             PipelineCICD pipeline = pipelineCICDRepository.findByRepositorio(repoUrl)
                     .orElseGet(() -> {
                         PipelineCICD novo = new PipelineCICD();
@@ -263,22 +262,27 @@ public class SandboxService {
             AnaliseJob jobSalvo = analiseJobService.salvar(job);
 
             analiseJobService.iniciar(jobSalvo.getId());
+            
+            // Lê os bytes do ficheiro físico clonado e cria o contexto
+            byte[] bytes = java.nio.file.Files.readAllBytes(arquivoFisico);
+            ContextoAnalise contexto = ContextoAnalise.de(
+                    arquivoSalvo.getNomeOriginal(),
+                    arquivoSalvo.getTipoMime(),
+                    bytes
+            );
 
-            // Lê o conteúdo bruto do arquivo com o encoding correto
-            String conteudo = new String(
-                    java.nio.file.Files.readAllBytes(arquivoFisico),
-                    java.nio.charset.StandardCharsets.ISO_8859_1);
+            // Executa a mesma esteira de testes estáticos do upload
+            ResultadoAnalise resultado = motorAnaliseSeguranca.analisar(contexto);
             
-            if (conteudo.length() > 6000) {
-                conteudo = conteudo.substring(0, 6000) + "\n...[TRUNCADO]";
-            }
-            
-            jobSalvo.setResultadoBruto(conteudo);
+            // Guarda os achados estruturados (TSV) no job
+            jobSalvo.setResultadoBruto(resultado.paraResultadoBruto());
             analiseJobService.salvar(jobSalvo);
 
-            // Envia o conteúdo bruto do arquivo diretamente para a IA
+            // Envia os achados formatados para a IA redigir o relatório forense
             RelatorioAmeaca relatorio = analiseIAService.analisar(
-                    jobSalvo.getResultadoBruto(), jobSalvo);
+                    textoParaIA(resultado), 
+                    jobSalvo
+            );
             relatorioAmeacaService.salvar(relatorio);
 
             analiseJobService.concluir(jobSalvo.getId());
